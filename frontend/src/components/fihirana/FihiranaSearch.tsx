@@ -60,10 +60,18 @@ const FihiranaSearch: React.FC = () => {
     setHasSearched(true);
 
     try {
-      // TODO: Replace with actual API endpoint when backend is ready
-      setResults([]);
-      setTotal(0);
-      setError('La fonctionnalité de recherche Fihirana sera ajoutée prochainement.');
+      const offset = (pageNum - 1) * resultsPerPage;
+      const response = await api.get<SearchResponse>('/fihirana/search', {
+        params: {
+          q: searchQuery,
+          limit: resultsPerPage,
+          offset,
+        },
+      });
+
+      setResults(response.data.results);
+      setTotal(response.data.total);
+      setPage(pageNum);
     } catch (err: any) {
       setError(err.message || t('errors.searchFailed'));
       setResults([]);

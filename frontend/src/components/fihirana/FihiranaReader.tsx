@@ -49,16 +49,37 @@ const FihiranaReader: React.FC<FihiranaReaderProps> = ({ fihiranaId }) => {
     loadFihiranas();
   }, [selectedCollection]);
 
+  useEffect(() => {
+    if (fihiranaId && fihiranas.length > 0) {
+      const fihirana = fihiranas.find(f => f.id === fihiranaId);
+      if (fihirana) {
+        setSelectedFihirana(fihirana);
+      }
+    }
+  }, [fihiranaId, fihiranas]);
+
   const loadFihiranas = async () => {
     setLoading(true);
     setError(null);
     try {
-      // TODO: Replace with actual API endpoint when backend is ready
-      // For now, showing placeholder message
-      setFihiranas([]);
-      setError(t('fihirana.noResults') || 'Tsy mbola misy angon-drakitra');
+      const params: any = {
+        limit: 200,
+        offset: 0,
+      };
+
+      if (selectedCollection !== 'all') {
+        params.collection = selectedCollection.toUpperCase();
+      }
+
+      const response = await api.get('/fihirana', { params });
+      setFihiranas(response.data.fihiranas);
+
+      if (response.data.fihiranas.length === 0) {
+        setError(t('fihirana.noResults') || 'Tsy hita fihirana');
+      }
     } catch (err: any) {
       setError(err.message || t('errors.loadFailed'));
+      setFihiranas([]);
     } finally {
       setLoading(false);
     }
@@ -98,9 +119,6 @@ const FihiranaReader: React.FC<FihiranaReaderProps> = ({ fihiranaId }) => {
       {error && (
         <Alert severity="info" sx={{ mb: 2 }}>
           {error}
-          <Typography variant="body2" sx={{ mt: 1 }}>
-            La base de données Fihirana sera ajoutée prochainement.
-          </Typography>
         </Alert>
       )}
 

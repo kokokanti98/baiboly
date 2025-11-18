@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { Box, Tabs, Tab, Container } from '@mui/material';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import SearchIcon from '@mui/icons-material/Search';
+import BookmarkIcon from '@mui/icons-material/Bookmark';
 import BibleReader from '../components/Bible/BibleReader';
 import BibleSearch from '../components/Bible/BibleSearch';
+import BibleReferenceSearch from '../components/Bible/BibleReferenceSearch';
 import { useTranslation } from 'react-i18next';
 
 interface TabPanelProps {
@@ -39,7 +41,7 @@ const BiblePage: React.FC = () => {
   return (
     <Box>
       <Container maxWidth="lg">
-        {/* Tabs for switching between reader and search */}
+        {/* Tabs for switching between reader, search, and reference */}
         <Box sx={{ borderBottom: 1, borderColor: 'divider', mt: 2, mb: 2 }}>
           <Tabs
             value={tabValue}
@@ -56,11 +58,19 @@ const BiblePage: React.FC = () => {
               sx={{ minHeight: 48, fontSize: '1rem' }}
             />
             <Tab
+              icon={<BookmarkIcon />}
+              iconPosition="start"
+              label="Référence"
+              id="bible-tab-1"
+              aria-controls="bible-tabpanel-1"
+              sx={{ minHeight: 48, fontSize: '1rem' }}
+            />
+            <Tab
               icon={<SearchIcon />}
               iconPosition="start"
               label={t('common.search')}
-              id="bible-tab-1"
-              aria-controls="bible-tabpanel-1"
+              id="bible-tab-2"
+              aria-controls="bible-tabpanel-2"
               sx={{ minHeight: 48, fontSize: '1rem' }}
             />
           </Tabs>
@@ -71,6 +81,10 @@ const BiblePage: React.FC = () => {
         </TabPanel>
 
         <TabPanel value={tabValue} index={1}>
+          <BibleReferenceSearch />
+        </TabPanel>
+
+        <TabPanel value={tabValue} index={2}>
           <BibleSearch />
         </TabPanel>
       </Container>
