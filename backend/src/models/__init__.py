@@ -1,8 +1,6 @@
 """SQLAlchemy models package."""
 from src.app import db
 from src.models.bible import Livre, Chapitre, Verset
+from src.models.fihirana import Fihirana
 
-# Future models
-# from src.models.fihirana import Chant
-
-__all__ = ["db", "Livre", "Chapitre", "Verset"]
+__all__ = ["db", "Livre", "Chapitre", "Verset", "Fihirana"]

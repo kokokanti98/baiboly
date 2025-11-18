@@ -134,6 +134,63 @@ class BibleReferenceResource(Resource):
         return verset, 200
 
 
+class BibleReferenceRangeResource(Resource):
+    """Resource for getting verses by reference range (e.g., Gen 1:1-5)."""
+
+    def get(self):
+        """
+        GET /api/bible/reference-range
+        Query params:
+            ref: Full reference (e.g., "Genesis 1:5-7", "Gen 1:5-7")
+        OR:
+            livre: Book name or abbreviation
+            chapitre: Chapter number
+            verset_debut: Starting verse number
+            verset_fin: Ending verse number (optional, defaults to verset_debut)
+        """
+        # Try to parse full reference string
+        ref = request.args.get('ref', '').strip()
+
+        if ref:
+            # Parse reference like "Genesis 1:5-7" or "Gen 1:5-7"
+            service = BibleService(db.session)
+            result = service.parse_and_get_verse_range(ref)
+
+            if result.get('error'):
+                return result, 400
+
+            return result, 200
+
+        # Alternative: use separate parameters
+        livre_param = request.args.get('livre')
+        chapitre_numero = request.args.get('chapitre', type=int)
+        verset_debut = request.args.get('verset_debut', type=int)
+        verset_fin = request.args.get('verset_fin', type=int)
+
+        if not livre_param or not chapitre_numero or not verset_debut:
+            return {
+                "error": "Ilaina ny 'ref' na 'livre', 'chapitre', 'verset_debut'"
+            }, 400
+
+        # If no end verse specified, use start verse
+        if not verset_fin:
+            verset_fin = verset_debut
+
+        service = BibleService(db.session)
+        versets = service.get_verse_range(
+            livre_param, chapitre_numero, verset_debut, verset_fin
+        )
+
+        if not versets or len(versets) == 0:
+            return {"error": "Tsy hita ny andininy"}, 404
+
+        return {
+            "versets": versets,
+            "reference": f"{livre_param} {chapitre_numero}:{verset_debut}-{verset_fin}",
+            "count": len(versets)
+        }, 200
+
+
 class BibleSearchResource(Resource):
     """Resource for searching verses by text."""
 
@@ -193,4 +250,5 @@ api.add_resource(ChapitreResource, '/chapitres/<int:chapitre_id>')
 api.add_resource(ChapitreVersetsResource, '/chapitres/<int:chapitre_id>/versets')
 api.add_resource(VersetResource, '/versets/<int:verset_id>')
 api.add_resource(BibleReferenceResource, '/reference')
+api.add_resource(BibleReferenceRangeResource, '/reference-range')
 api.add_resource(BibleSearchResource, '/search')

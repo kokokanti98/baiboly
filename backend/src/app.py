@@ -41,9 +41,9 @@ def create_app(config_name="default"):
 
     # Register blueprints
     from src.api.bible import bible_bp
+    from src.api.fihirana import fihirana_bp
     app.register_blueprint(bible_bp, url_prefix="/api/bible")
-    # from src.api.fihirana import fihirana_bp
-    # app.register_blueprint(fihirana_bp, url_prefix="/api/fihirana")
+    app.register_blueprint(fihirana_bp, url_prefix="/api/fihirana")
 
     @app.route("/api/health")
     def health_check():

@@ -2,6 +2,7 @@
 Bible service for business logic related to Bible data access.
 Provides methods to retrieve livres, chapitres, and versets.
 """
+import re
 from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session, joinedload
 from src.models.bible import Livre, Chapitre, Verset
@@ -205,3 +206,88 @@ class BibleService:
         )
 
         return [verset.to_dict(include_references=True) for verset in versets]
+
+    def get_verse_range(
+        self,
+        livre_param: str,
+        chapitre_numero: int,
+        verset_debut: int,
+        verset_fin: int,
+    ) -> List[Dict[str, Any]]:
+        """
+        Get a range of verses by book name/abbreviation.
+
+        Args:
+            livre_param: Book name or abbreviation
+            chapitre_numero: Chapter number
+            verset_debut: Starting verse number
+            verset_fin: Ending verse number
+
+        Returns:
+            List of verset dictionaries with references
+        """
+        # Try to find livre by abbreviation first, then by name
+        livre = self.session.query(Livre).filter(
+            (Livre.abbrev.ilike(livre_param)) | (Livre.nom.ilike(livre_param))
+        ).first()
+
+        if not livre:
+            return []
+
+        return self.get_versets_range(
+            livre.abbrev, chapitre_numero, verset_debut, verset_fin
+        )
+
+    def parse_and_get_verse_range(self, reference: str) -> Dict[str, Any]:
+        """
+        Parse a Bible reference string and retrieve verses.
+
+        Supports formats:
+        - "Genesis 1:5-7"
+        - "Gen 1:5-7"
+        - "Genesisy 1:5" (single verse)
+
+        Args:
+            reference: Bible reference string
+
+        Returns:
+            Dictionary with 'versets' and metadata, or 'error' if invalid
+        """
+        # Pattern: "Book Chapter:VerseStart-VerseEnd" or "Book Chapter:Verse"
+        # Examples: "Genesis 1:5-7", "Gen 1:5", "1 Korintianina 1:1-5"
+        pattern = r'^(.+?)\s+(\d+):(\d+)(?:-(\d+))?$'
+        match = re.match(pattern, reference.strip())
+
+        if not match:
+            return {"error": f"Format diso: '{reference}'. Ohatra: 'Genesis 1:5-7'"}
+
+        livre_name = match.group(1).strip()
+        chapitre = int(match.group(2))
+        verset_debut = int(match.group(3))
+        verset_fin = int(match.group(4)) if match.group(4) else verset_debut
+
+        # Find the book
+        livre = self.session.query(Livre).filter(
+            (Livre.abbrev.ilike(livre_name)) | (Livre.nom.ilike(livre_name))
+        ).first()
+
+        if not livre:
+            return {"error": f"Tsy hita ny boky: '{livre_name}'"}
+
+        # Get verses
+        versets = self.get_versets_range(
+            livre.abbrev, chapitre, verset_debut, verset_fin
+        )
+
+        if not versets:
+            return {"error": f"Tsy hita ny andininy: {livre.nom} {chapitre}:{verset_debut}-{verset_fin}"}
+
+        return {
+            "versets": versets,
+            "reference": f"{livre.nom} {chapitre}:{verset_debut}-{verset_fin}",
+            "livre": livre.to_dict(),
+            "chapitre": chapitre,
+            "verset_debut": verset_debut,
+            "verset_fin": verset_fin,
+            "count": len(versets)
+        }
