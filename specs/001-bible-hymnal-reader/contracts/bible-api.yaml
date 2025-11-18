@@ -1,0 +1,569 @@
+openapi: 3.0.3
+info:
+  title: Baiboly API
+  description: |
+    REST API for accessing Bible content in Malagasy.
+
+    Features:
+    - List all 66 Bible books
+    - Navigate by book, chapter, and verse
+    - Search verses by reference or content
+    - Full-text search in Malagasy
+
+  version: 1.0.0
+  contact:
+    name: Baiboly Platform Team
+servers:
+  - url: http://localhost:5000/api
+    description: Development server
+  - url: https://api.baiboly.mg/api
+    description: Production server
+
+tags:
+  - name: Books
+    description: Bible book operations
+  - name: Chapters
+    description: Chapter operations
+  - name: Verses
+    description: Verse operations
+  - name: Search
+    description: Search functionality
+
+paths:
+  /bible/books:
+    get:
+      tags:
+        - Books
+      summary: List all Bible books
+      description: Returns all 66 Bible books ordered by display order (1-66)
+      parameters:
+        - name: testament
+          in: query
+          description: Filter by testament (optional)
+          required: false
+          schema:
+            type: string
+            enum: [taloha, vaovao]
+            example: vaovao
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BooksResponse'
+              example:
+                success: true
+                data:
+                  - id: 1
+                    nom_malagasy: "Genesisy"
+                    nom_francais: "Genèse"
+                    testament: "taloha"
+                    ordre: 1
+                    nombre_chapitres: 50
+                  - id: 40
+                    nom_malagasy: "Matio"
+                    nom_francais: "Matthieu"
+                    testament: "vaovao"
+                    ordre: 40
+                    nombre_chapitres: 28
+                message: "Nahomby"
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /bible/books/{bookId}:
+    get:
+      tags:
+        - Books
+      summary: Get a specific book
+      description: Returns details for a single Bible book
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          description: Book ID
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /bible/books/{bookId}/chapters:
+    get:
+      tags:
+        - Chapters
+      summary: List chapters for a book
+      description: Returns all chapters for the specified Bible book
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          description: Book ID
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChaptersResponse'
+              example:
+                success: true
+                data:
+                  - id: 1
+                    numero: 1
+                    livre_id: 1
+                    nombre_versets: 31
+                  - id: 2
+                    numero: 2
+                    livre_id: 1
+                    nombre_versets: 25
+                message: "Nahomby"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /bible/books/{bookId}/chapters/{chapterNum}:
+    get:
+      tags:
+        - Chapters
+      summary: Get a specific chapter
+      description: Returns details for a single chapter
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          description: Book ID
+          schema:
+            type: integer
+            example: 1
+        - name: chapterNum
+          in: path
+          required: true
+          description: Chapter number
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChapterResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /bible/books/{bookId}/chapters/{chapterNum}/verses:
+    get:
+      tags:
+        - Verses
+      summary: List verses for a chapter
+      description: Returns all verses for the specified chapter
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          description: Book ID
+          schema:
+            type: integer
+            example: 1
+        - name: chapterNum
+          in: path
+          required: true
+          description: Chapter number
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersesResponse'
+              example:
+                success: true
+                data:
+                  - id: 1
+                    numero: 1
+                    chapitre_id: 1
+                    texte: "Tamin'ny voalohany dia nahary ny lanitra sy ny tany Andriamanitra."
+                  - id: 2
+                    numero: 2
+                    chapitre_id: 1
+                    texte: "Ary ny tany dia tsy nisy endrika sady foana..."
+                message: "Nahomby"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /bible/verses/{verseId}:
+    get:
+      tags:
+        - Verses
+      summary: Get a specific verse
+      description: Returns a single verse by ID
+      parameters:
+        - name: verseId
+          in: path
+          required: true
+          description: Verse ID
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerseResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /bible/search:
+    post:
+      tags:
+        - Search
+      summary: Search Bible content
+      description: |
+        Search verses by reference or content
+
+        **Search types:**
+        - `reference`: Search by book name and chapter:verse (e.g., "Jaona 3:16")
+        - `content`: Full-text search in verse content (e.g., "fitiavana")
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BibleSearchRequest'
+            examples:
+              reference_search:
+                summary: Search by reference
+                value:
+                  type: "reference"
+                  query: "Jaona 3:16"
+              content_search:
+                summary: Search by content
+                value:
+                  type: "content"
+                  query: "fitiavana"
+                  page: 1
+                  limit: 50
+      responses:
+        '200':
+          description: Successful search
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+              examples:
+                reference_result:
+                  summary: Reference search result
+                  value:
+                    success: true
+                    data:
+                      - id: 12345
+                        numero: 16
+                        texte: "Fa toy izao no nitiavan'Andriamanitra izao tontolo izao..."
+                        livre:
+                          nom_malagasy: "Jaona"
+                          nom_francais: "Jean"
+                        chapitre: 3
+                        reference: "Jaona 3:16"
+                    pagination:
+                      page: 1
+                      limit: 50
+                      total: 1
+                      pages: 1
+                    message: "Nahita vokatra 1"
+                content_result:
+                  summary: Content search result
+                  value:
+                    success: true
+                    data:
+                      - id: 12345
+                        numero: 16
+                        texte: "Fa toy izao no nitiavan'Andriamanitra izao tontolo izao..."
+                        livre:
+                          nom_malagasy: "Jaona"
+                          nom_francais: "Jean"
+                        chapitre: 3
+                        reference: "Jaona 3:16"
+                        rank: 0.95
+                    pagination:
+                      page: 1
+                      limit: 50
+                      total: 145
+                      pages: 3
+                    message: "Nahita vokatra 145"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+components:
+  schemas:
+    Book:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        nom_malagasy:
+          type: string
+          example: "Genesisy"
+        nom_francais:
+          type: string
+          example: "Genèse"
+        testament:
+          type: string
+          enum: [taloha, vaovao]
+          example: "taloha"
+        ordre:
+          type: integer
+          example: 1
+        nombre_chapitres:
+          type: integer
+          example: 50
+
+    Chapter:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        numero:
+          type: integer
+          example: 1
+        livre_id:
+          type: integer
+          example: 1
+        nombre_versets:
+          type: integer
+          example: 31
+
+    Verse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        numero:
+          type: integer
+          example: 1
+        chapitre_id:
+          type: integer
+          example: 1
+        texte:
+          type: string
+          example: "Tamin'ny voalohany dia nahary ny lanitra sy ny tany Andriamanitra."
+
+    VerseWithContext:
+      allOf:
+        - $ref: '#/components/schemas/Verse'
+        - type: object
+          properties:
+            livre:
+              type: object
+              properties:
+                nom_malagasy:
+                  type: string
+                nom_francais:
+                  type: string
+            chapitre:
+              type: integer
+            reference:
+              type: string
+              example: "Genesisy 1:1"
+            rank:
+              type: number
+              format: float
+              description: Search relevance rank (0-1)
+
+    BibleSearchRequest:
+      type: object
+      required:
+        - type
+        - query
+      properties:
+        type:
+          type: string
+          enum: [reference, content]
+          description: Type of search
+        query:
+          type: string
+          description: Search query
+          example: "Jaona 3:16"
+        page:
+          type: integer
+          default: 1
+          example: 1
+        limit:
+          type: integer
+          default: 50
+          example: 50
+
+    BooksResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Book'
+        message:
+          type: string
+
+    BookResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/Book'
+        message:
+          type: string
+
+    ChaptersResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Chapter'
+        message:
+          type: string
+
+    ChapterResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/Chapter'
+        message:
+          type: string
+
+    VersesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Verse'
+        message:
+          type: string
+
+    VerseResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/Verse'
+        message:
+          type: string
+
+    SearchResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/VerseWithContext'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+        message:
+          type: string
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        pages:
+          type: integer
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: "NOT_FOUND"
+            message:
+              type: string
+              example: "Tsy hita ny boky"
+
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: "NOT_FOUND"
+              message: "Tsy hita ny boky"
+
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: "INVALID_REQUEST"
+              message: "Fangatahana tsy marina"
+
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: "INTERNAL_ERROR"
+              message: "Nisy olana tao anaty serveur"

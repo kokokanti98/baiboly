@@ -1,0 +1,479 @@
+openapi: 3.0.3
+info:
+  title: Fihirana API
+  description: |
+    REST API for accessing evangelical hymns (Fihirana) in Malagasy.
+
+    Collections:
+    - **FFPM**: Main FFPM hymnal collection
+    - **Fanampiny**: Supplementary hymns
+    - **Antema**: Antiphonal/responsive hymns
+
+    Features:
+    - List hymns by collection
+    - Get hymn by number and collection
+    - Search hymns by title or lyrics content
+    - Full-text search in Malagasy
+
+  version: 1.0.0
+  contact:
+    name: Baiboly Platform Team
+servers:
+  - url: http://localhost:5000/api
+    description: Development server
+  - url: https://api.baiboly.mg/api
+    description: Production server
+
+tags:
+  - name: Hymns
+    description: Hymn operations
+  - name: Search
+    description: Search functionality
+
+paths:
+  /fihirana/hymns:
+    get:
+      tags:
+        - Hymns
+      summary: List hymns
+      description: Returns all hymns, optionally filtered by collection
+      parameters:
+        - name: source
+          in: query
+          description: Filter by collection (optional)
+          required: false
+          schema:
+            type: string
+            enum: [ffpm, fanampiny, antema]
+            example: ffpm
+        - name: page
+          in: query
+          description: Page number
+          required: false
+          schema:
+            type: integer
+            default: 1
+            example: 1
+        - name: limit
+          in: query
+          description: Results per page
+          required: false
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+            example: 50
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HymnsResponse'
+              example:
+                success: true
+                data:
+                  - id: 1
+                    numero: 1
+                    titre: "Miainga isika"
+                    paroles: "Miainga isika\nHandeha any Ziona...\n(Refrain)"
+                    source: "ffpm"
+                    compositeur: null
+                  - id: 2
+                    numero: 2
+                    titre: "Andriamanitra Jehovah"
+                    paroles: "Andriamanitra Jehovah ô..."
+                    source: "ffpm"
+                    compositeur: null
+                pagination:
+                  page: 1
+                  limit: 50
+                  total: 320
+                  pages: 7
+                message: "Nahomby"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /fihirana/hymns/{hymnId}:
+    get:
+      tags:
+        - Hymns
+      summary: Get a specific hymn by ID
+      description: Returns details for a single hymn
+      parameters:
+        - name: hymnId
+          in: path
+          required: true
+          description: Hymn ID
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HymnResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /fihirana/hymns/by-number/{source}/{numero}:
+    get:
+      tags:
+        - Hymns
+      summary: Get hymn by number and collection
+      description: Returns a hymn by its number within a specific collection
+      parameters:
+        - name: source
+          in: path
+          required: true
+          description: Collection name
+          schema:
+            type: string
+            enum: [ffpm, fanampiny, antema]
+            example: ffpm
+        - name: numero
+          in: path
+          required: true
+          description: Hymn number in collection
+          schema:
+            type: integer
+            example: 125
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HymnResponse'
+              example:
+                success: true
+                data:
+                  id: 125
+                  numero: 125
+                  titre: "Jesosy Tompo"
+                  paroles: "Jesosy Tompo soa\nMitaraina aminao aho...\n\n(Refrain)\nJesosy Tompo ô"
+                  source: "ffpm"
+                  compositeur: "Andriamanitra Jehovah"
+                message: "Nahomby"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /fihirana/search:
+    post:
+      tags:
+        - Search
+      summary: Search hymns
+      description: |
+        Search hymns by number or content (title/lyrics)
+
+        **Search types:**
+        - `number`: Search by hymn number (e.g., "125")
+        - `content`: Full-text search in title and lyrics (e.g., "Jesosy")
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FihiranaSearchRequest'
+            examples:
+              number_search:
+                summary: Search by number
+                value:
+                  type: "number"
+                  query: "125"
+                  source: "ffpm"
+              content_search:
+                summary: Search by content
+                value:
+                  type: "content"
+                  query: "Jesosy"
+                  page: 1
+                  limit: 50
+      responses:
+        '200':
+          description: Successful search
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+              examples:
+                number_result:
+                  summary: Number search result
+                  value:
+                    success: true
+                    data:
+                      - id: 125
+                        numero: 125
+                        titre: "Jesosy Tompo"
+                        paroles: "Jesosy Tompo soa..."
+                        source: "ffpm"
+                        compositeur: "Andriamanitra Jehovah"
+                    pagination:
+                      page: 1
+                      limit: 50
+                      total: 1
+                      pages: 1
+                    message: "Nahita vokatra 1"
+                content_result:
+                  summary: Content search result
+                  value:
+                    success: true
+                    data:
+                      - id: 125
+                        numero: 125
+                        titre: "Jesosy Tompo"
+                        paroles_excerpt: "Jesosy Tompo soa\nMitaraina aminao aho..."
+                        source: "ffpm"
+                        compositeur: "Andriamanitra Jehovah"
+                        rank: 0.98
+                      - id: 203
+                        numero: 203
+                        titre: "Jesosy ny Tompo"
+                        paroles_excerpt: "Jesosy ny Tompo Marina..."
+                        source: "ffpm"
+                        compositeur: null
+                        rank: 0.87
+                    pagination:
+                      page: 1
+                      limit: 50
+                      total: 42
+                      pages: 1
+                    message: "Nahita vokatra 42"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /fihirana/collections:
+    get:
+      tags:
+        - Hymns
+      summary: List collections
+      description: Returns available hymn collections with counts
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionsResponse'
+              example:
+                success: true
+                data:
+                  - source: "ffpm"
+                    name: "FFPM - Fihirana Fjkm, Protestanta, Malagasy"
+                    count: 320
+                  - source: "fanampiny"
+                    name: "Fihirana Fanampiny"
+                    count: 150
+                  - source: "antema"
+                    name: "Antema"
+                    count: 80
+                message: "Nahomby"
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+components:
+  schemas:
+    Hymn:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        numero:
+          type: integer
+          example: 125
+        titre:
+          type: string
+          nullable: true
+          example: "Jesosy Tompo"
+        paroles:
+          type: string
+          example: "Jesosy Tompo soa\nMitaraina aminao aho...\n\n(Refrain)\nJesosy Tompo ô"
+        source:
+          type: string
+          enum: [ffpm, fanampiny, antema]
+          example: "ffpm"
+        compositeur:
+          type: string
+          nullable: true
+          example: "Andriamanitra Jehovah"
+
+    HymnSearchResult:
+      allOf:
+        - $ref: '#/components/schemas/Hymn'
+        - type: object
+          properties:
+            paroles_excerpt:
+              type: string
+              description: Excerpt of lyrics (for search results)
+              example: "Jesosy Tompo soa\nMitaraina aminao aho..."
+            rank:
+              type: number
+              format: float
+              description: Search relevance rank (0-1)
+              example: 0.95
+
+    FihiranaSearchRequest:
+      type: object
+      required:
+        - type
+        - query
+      properties:
+        type:
+          type: string
+          enum: [number, content]
+          description: Type of search
+        query:
+          type: string
+          description: Search query
+          example: "125"
+        source:
+          type: string
+          enum: [ffpm, fanampiny, antema]
+          description: Filter by collection (optional for number search)
+        page:
+          type: integer
+          default: 1
+          example: 1
+        limit:
+          type: integer
+          default: 50
+          example: 50
+
+    Collection:
+      type: object
+      properties:
+        source:
+          type: string
+          enum: [ffpm, fanampiny, antema]
+        name:
+          type: string
+          description: Full collection name
+        count:
+          type: integer
+          description: Number of hymns in collection
+
+    HymnsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Hymn'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+        message:
+          type: string
+
+    HymnResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/Hymn'
+        message:
+          type: string
+
+    SearchResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/HymnSearchResult'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+        message:
+          type: string
+
+    CollectionsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Collection'
+        message:
+          type: string
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        pages:
+          type: integer
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: "NOT_FOUND"
+            message:
+              type: string
+              example: "Tsy hita ny fihirana"
+
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: "NOT_FOUND"
+              message: "Tsy hita ny fihirana"
+
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: "INVALID_REQUEST"
+              message: "Fangatahana tsy marina"
+
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: "INTERNAL_ERROR"
+              message: "Nisy olana tao anaty serveur"

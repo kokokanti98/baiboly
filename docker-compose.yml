@@ -1,0 +1,106 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:13-alpine
+    container_name: baiboly_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: baiboly_dev
+      POSTGRES_USER: baiboly_user
+      POSTGRES_PASSWORD: dev_password_2025
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - baiboly_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U baiboly_user -d baiboly_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Flask Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: baiboly_backend
+    restart: unless-stopped
+    environment:
+      FLASK_APP: src/app.py
+      FLASK_ENV: development
+      DATABASE_URL: postgresql://baiboly_user:dev_password_2025@db:5432/baiboly_dev
+      SECRET_KEY: dev-secret-key-change-in-production
+      CORS_ORIGINS: http://localhost:5173,http://localhost:3000
+      BABEL_DEFAULT_LOCALE: mg
+      BABEL_DEFAULT_TIMEZONE: Indian/Antananarivo
+    volumes:
+      - ./backend:/app
+      - /app/venv  # Prevent overwriting venv from host
+    ports:
+      - "5000:5000"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - baiboly_network
+    command: >
+      sh -c "
+        if [ ! -d 'migrations' ]; then flask db init; fi &&
+        flask run --host=0.0.0.0 --port=5000 --reload
+      "
+
+  # React Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: baiboly_frontend
+    restart: unless-stopped
+    environment:
+      VITE_API_BASE_URL: http://localhost:5000/api
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules  # Prevent overwriting node_modules from host
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    networks:
+      - baiboly_network
+    command: npm run dev -- --host 0.0.0.0
+
+  # pgAdmin (Optional - for database management)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: baiboly_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@baiboly.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+    networks:
+      - baiboly_network
+    profiles:
+      - tools  # Only start with: docker-compose --profile tools up
+
+networks:
+  baiboly_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    name: baiboly_postgres_data
+  pgadmin_data:
+    name: baiboly_pgadmin_data

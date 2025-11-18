@@ -1,0 +1,46 @@
+{
+  "common": {
+    "search": "Karohy",
+    "loading": "Mahandrasa...",
+    "error": "Nisy olana",
+    "notFound": "Tsy hita",
+    "home": "Fandraisana",
+    "back": "Hiverina",
+    "all": "Rehetra"
+  },
+  "navigation": {
+    "bible": "Baiboly",
+    "fihirana": "Fihirana",
+    "home": "Fandraisana"
+  },
+  "bible": {
+    "title": "Baiboly",
+    "books": "Boky",
+    "chapter": "Toko",
+    "chapters": "Toko",
+    "verse": "Andininy",
+    "verses": "Andininy",
+    "searchPlaceholder": "Karohy andininy na toko...",
+    "oldTestament": "Testamenta Taloha",
+    "newTestament": "Testamenta Vaovao",
+    "noResults": "Tsy nahita vokatra"
+  },
+  "fihirana": {
+    "title": "Fihirana",
+    "hymns": "Fihirana",
+    "number": "Laharana",
+    "title_field": "Lohateny",
+    "lyrics": "Tononkira",
+    "searchPlaceholder": "Karohy fihirana...",
+    "collections": "Fanangonana",
+    "ffpm": "FFPM",
+    "fanampiny": "Fanampiny",
+    "antema": "Antema",
+    "noResults": "Tsy nahita fihirana"
+  },
+  "errors": {
+    "loadFailed": "Tsy afaka naka ny angon-drakitra",
+    "searchFailed": "Nisy olana tamin'ny fikarohana",
+    "networkError": "Mamariko ny fifandraisanao amin'ny Internet"
+  }
+}
