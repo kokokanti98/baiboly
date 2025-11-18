@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Box, Tabs, Tab, Container } from '@mui/material';
-import MenuBookIcon from '@mui/icons-material/MenuBook';
+import MusicNoteIcon from '@mui/icons-material/MusicNote';
 import SearchIcon from '@mui/icons-material/Search';
-import BibleReader from '../components/Bible/BibleReader';
-import BibleSearch from '../components/Bible/BibleSearch';
+import FihiranaReader from '../components/Fihirana/FihiranaReader';
+import FihiranaSearch from '../components/Fihirana/FihiranaSearch';
 import { useTranslation } from 'react-i18next';
 
 interface TabPanelProps {
@@ -19,8 +19,8 @@ function TabPanel(props: TabPanelProps) {
     <div
       role="tabpanel"
       hidden={value !== index}
-      id={`bible-tabpanel-${index}`}
-      aria-labelledby={`bible-tab-${index}`}
+      id={`fihirana-tabpanel-${index}`}
+      aria-labelledby={`fihirana-tab-${index}`}
       {...other}
     >
       {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
@@ -28,7 +28,7 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-const BiblePage: React.FC = () => {
+const FihiranaPage: React.FC = () => {
   const { t } = useTranslation();
   const [tabValue, setTabValue] = useState(0);
 
@@ -44,38 +44,38 @@ const BiblePage: React.FC = () => {
           <Tabs
             value={tabValue}
             onChange={handleTabChange}
-            aria-label="Bible navigation tabs"
+            aria-label="Fihirana navigation tabs"
             centered
           >
             <Tab
-              icon={<MenuBookIcon />}
+              icon={<MusicNoteIcon />}
               iconPosition="start"
-              label={t('bible.title')}
-              id="bible-tab-0"
-              aria-controls="bible-tabpanel-0"
+              label={t('fihirana.title')}
+              id="fihirana-tab-0"
+              aria-controls="fihirana-tabpanel-0"
               sx={{ minHeight: 48, fontSize: '1rem' }}
             />
             <Tab
               icon={<SearchIcon />}
               iconPosition="start"
               label={t('common.search')}
-              id="bible-tab-1"
-              aria-controls="bible-tabpanel-1"
+              id="fihirana-tab-1"
+              aria-controls="fihirana-tabpanel-1"
               sx={{ minHeight: 48, fontSize: '1rem' }}
             />
           </Tabs>
         </Box>
 
         <TabPanel value={tabValue} index={0}>
-          <BibleReader />
+          <FihiranaReader />
         </TabPanel>
 
         <TabPanel value={tabValue} index={1}>
-          <BibleSearch />
+          <FihiranaSearch />
         </TabPanel>
       </Container>
     </Box>
   );
 };
 
-export default BiblePage;
+export default FihiranaPage;
