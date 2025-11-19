@@ -1,4 +1,5 @@
 # Quickstart Guide: Baiboly sy Fihirana Platform
+[//]: # (# use: Lis QUICK_START_NOUVELLE_SESSION.md et mets-toi à jour)
 
 **Feature**: 001-bible-hymnal-reader
 **Last Updated**: 2025-11-18
