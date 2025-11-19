@@ -15,7 +15,12 @@ import {
   Divider,
   Grid,
   Button,
+  TextField,
+  InputAdornment,
+  IconButton,
 } from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../services/api';
 
@@ -39,17 +44,18 @@ const FihiranaReader: React.FC<FihiranaReaderProps> = ({ fihiranaId }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedCollection, setSelectedCollection] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   const collections = [
     { id: 'all', label: t('common.all') },
-    { id: 'ffpm', label: t('fihirana.ffpm') },
-    { id: 'fanampiny', label: t('fihirana.fanampiny') },
-    { id: 'antema', label: t('fihirana.antema') },
+    { id: 'FFPM', label: 'FFPM' },
+    { id: 'FANAMPINY', label: t('fihirana.fanampiny') },
+    { id: 'ANTEMA', label: t('fihirana.antema') },
   ];
 
   useEffect(() => {
     loadFihiranas();
-  }, [selectedCollection]);
+  }, [selectedCollection, searchQuery]);
 
   useEffect(() => {
     if (fihiranaId && fihiranas.length > 0) {
@@ -64,19 +70,38 @@ const FihiranaReader: React.FC<FihiranaReaderProps> = ({ fihiranaId }) => {
     setLoading(true);
     setError(null);
     try {
-      const params: any = {
-        limit: 200,
-        offset: 0,
-      };
+      let response;
 
-      if (selectedCollection !== 'all') {
-        params.collection = selectedCollection.toUpperCase();
+      if (searchQuery.trim()) {
+        // Search mode
+        const params: any = {
+          q: searchQuery,
+          limit: 200,
+          offset: 0,
+        };
+
+        if (selectedCollection !== 'all') {
+          params.collection = selectedCollection;
+        }
+
+        response = await api.get('/fihirana/search', { params });
+        setFihiranas(response.data.results || []);
+      } else {
+        // List mode
+        const params: any = {
+          limit: 200,
+          offset: 0,
+        };
+
+        if (selectedCollection !== 'all') {
+          params.collection = selectedCollection;
+        }
+
+        response = await api.get('/fihirana', { params });
+        setFihiranas(response.data.fihiranas || []);
       }
 
-      const response = await api.get('/fihirana', { params });
-      setFihiranas(response.data.fihiranas);
-
-      if (response.data.fihiranas.length === 0) {
+      if ((response.data.fihiranas || response.data.results || []).length === 0) {
         setError(t('fihirana.noResults') || 'Tsy hita fihirana');
       }
     } catch (err: any) {
@@ -97,22 +122,49 @@ const FihiranaReader: React.FC<FihiranaReaderProps> = ({ fihiranaId }) => {
         {t('fihirana.title')}
       </Typography>
 
-      {/* Collection Filter */}
+      {/* Search and Collection Filter */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
-          <Typography variant="subtitle1" gutterBottom>
-            {t('fihirana.collections')}
-          </Typography>
-          <Box display="flex" gap={1} flexWrap="wrap">
-            {collections.map((collection) => (
-              <Chip
-                key={collection.id}
-                label={collection.label}
-                onClick={() => setSelectedCollection(collection.id)}
-                color={selectedCollection === collection.id ? 'primary' : 'default'}
-                sx={{ cursor: 'pointer' }}
-              />
-            ))}
+          {/* Search Input */}
+          <TextField
+            fullWidth
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Hitady hira (numero na anarana)"
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+              endAdornment: searchQuery && (
+                <InputAdornment position="end">
+                  <IconButton onClick={() => setSearchQuery('')} size="small">
+                    <ClearIcon />
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+            sx={{ mb: 2 }}
+          />
+
+          {/* Collection Filter */}
+          <Box>
+            <Typography variant="subtitle2" gutterBottom>
+              {t('fihirana.collections')}
+            </Typography>
+            <Box display="flex" gap={1} flexWrap="wrap">
+              {collections.map((collection) => (
+                <Chip
+                  key={collection.id}
+                  label={collection.label}
+                  onClick={() => setSelectedCollection(collection.id)}
+                  color={selectedCollection === collection.id ? 'primary' : 'default'}
+                  sx={{ cursor: 'pointer' }}
+                />
+              ))}
+            </Box>
           </Box>
         </CardContent>
       </Card>

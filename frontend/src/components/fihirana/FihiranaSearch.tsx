@@ -27,9 +27,11 @@ import { api } from '../../services/api';
 interface SearchResult {
   id: number;
   numero: number;
-  titre: string;
-  paroles: string;
+  titre?: string;
+  lohateny?: string;
+  paroles?: string;
   collection: string;
+  isa_andininy?: number;
 }
 
 interface SearchResponse {
@@ -239,7 +241,7 @@ const FihiranaSearch: React.FC = () => {
                           color="secondary"
                         />
                         <Typography variant="h6" component="span">
-                          {highlightQuery(result.titre, query)}
+                          {highlightQuery(result.lohateny || result.titre || '', query)}
                         </Typography>
                         <Chip
                           label={result.collection}
@@ -249,17 +251,28 @@ const FihiranaSearch: React.FC = () => {
                       </Box>
                     }
                     secondary={
-                      <Typography
-                        component="span"
-                        variant="body2"
-                        color="text.primary"
-                        sx={{ lineHeight: 1.8, display: 'block', mt: 1 }}
-                      >
-                        {highlightQuery(
-                          result.paroles.substring(0, 200) + (result.paroles.length > 200 ? '...' : ''),
-                          query
-                        )}
-                      </Typography>
+                      result.paroles ? (
+                        <Typography
+                          component="span"
+                          variant="body2"
+                          color="text.primary"
+                          sx={{ lineHeight: 1.8, display: 'block', mt: 1 }}
+                        >
+                          {highlightQuery(
+                            result.paroles.substring(0, 200) + (result.paroles.length > 200 ? '...' : ''),
+                            query
+                          )}
+                        </Typography>
+                      ) : (
+                        <Typography
+                          component="span"
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{ display: 'block', mt: 1 }}
+                        >
+                          {result.collection} • {result.isa_andininy || 0} andininy
+                        </Typography>
+                      )
                     }
                   />
                 </ListItemButton>
