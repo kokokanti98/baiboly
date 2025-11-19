@@ -1,7 +1,7 @@
 # Résumé de Session - Projet Baiboly
 
-**Date de dernière mise à jour:** 2025-11-19
-**Statut du projet:** ✅ Fonctionnel - Fihirana complètement opérationnel
+**Date de dernière mise à jour:** 2025-11-19 (Session 2)
+**Statut du projet:** ✅ Fonctionnel - Fihirana + Bible + Backup automatique opérationnels
 
 ## 📋 État Actuel du Projet
 
@@ -55,7 +55,30 @@
 
 ## 🔧 Problèmes Résolus Récemment
 
-### 1. Erreur "Cannot read properties of undefined (reading 'substring')"
+### 3. Système de Backup et Restauration Automatique (2025-11-19)
+**Problème:** Pas de mécanisme pour sauvegarder et restaurer facilement les données de la base.
+
+**Solution Implémentée:**
+- ✅ Backup automatique de la BDD (892 hymnes + 3,520 versets + 44 livres Bible)
+- ✅ Import automatique au premier démarrage via docker-compose
+- ✅ Scripts de backup simplifiés (Windows: `backup-db.bat`, Linux: `backup-db.sh`)
+- ✅ Scripts de restauration manuelle
+- ✅ Documentation complète dans `backend/DATABASE_BACKUP.md`
+- ✅ Guide rapide dans `BACKUP_QUICKSTART.md`
+
+**Fichiers créés/modifiés:**
+- `backend/db_backup.sql` (backup complet ~2-5 MB)
+- `docker-compose.yml` (volumes pour auto-import)
+- `backend/DATABASE_BACKUP.md` (documentation)
+- `BACKUP_QUICKSTART.md` (guide rapide)
+- `backup-db.bat` et `backup-db.sh` (scripts utilitaires)
+
+**Commits:**
+- `97d152a` - Système de backup/restauration automatique
+- `731ebf1` - Scripts de backup simplifiés
+- `c5e3b15` - Guide rapide
+
+### 2. Erreur "Cannot read properties of undefined (reading 'substring')" (2025-11-18)
 **Fichier:** `frontend/src/components/fihirana/FihiranaSearch.tsx:262`
 
 **Solution:**
@@ -70,7 +93,7 @@ result.paroles?.substring(0, 200)
 result.paroles && result.paroles.length > 0 ? (...) : (...)
 ```
 
-### 2. Recherche par Numéro Ne Fonctionnait Pas
+### 1. Recherche par Numéro Ne Fonctionnait Pas (2025-11-18)
 **Fichier:** `backend/src/services/fihirana_service.py:139-156`
 
 **Solution:** Ajout de la détection de numéro dans la recherche
@@ -284,5 +307,10 @@ Aucun bug majeur connu pour le moment. L'application Fihirana est complètement 
 
 ---
 
-**Dernière modification:** 2025-11-19 par Claude Code
-**Commit actuel:** 54cd059 - "Corriger la recherche Fihirana: support numéro + fix paroles undefined"
+**Dernière modification:** 2025-11-19 (Session 2) par Claude Code
+**Commits de cette session:**
+- `97d152a` - Système de backup/restauration automatique
+- `731ebf1` - Scripts de backup simplifiés
+- `c5e3b15` - Guide rapide backup
+
+**Commit précédent:** `54cd059` - "Corriger la recherche Fihirana: support numéro + fix paroles undefined"
