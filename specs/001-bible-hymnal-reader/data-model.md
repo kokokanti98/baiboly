@@ -145,46 +145,99 @@ INSERT INTO verset (chapitre_id, numero, texte) VALUES
 
 ---
 
-### 4. `chant` (Hymns/Fihirana)
+### 4. Fihirana Schema (Hymns) - Verse-Based Structure
 
-Stores evangelical hymns from Lutheran and FJKM traditions with full-text search.
+The Fihirana data is stored in a normalized verse-based structure with three tables:
+
+#### 4a. `sokajy` (Hymn Categories)
+
+Optional categorization for hymns (currently unused, reserved for future use).
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | `id` | SERIAL | PRIMARY KEY | Auto-increment ID |
-| `numero` | INTEGER | NOT NULL | Hymn number in collection |
-| `titre` | VARCHAR(255) | | Hymn title in Malagasy (may be null if incomplete) |
-| `paroles` | TEXT | NOT NULL | Complete hymn lyrics |
-| `source` | VARCHAR(50) | NOT NULL | Collection source: "ffpm", "fanampiny", "antema" |
-| `compositeur` | VARCHAR(255) | | Composer name (may be null, metadata incomplete) |
-| `search_vector` | TSVECTOR | | Full-text search on titre + paroles |
-| `created_at` | TIMESTAMP | NOT NULL, DEFAULT NOW() | Record creation timestamp |
+| `anarana` | VARCHAR(255) | NOT NULL | Category name in Malagasy |
+
+#### 4b. `hira` (Hymns)
+
+Stores hymn metadata with one record per hymn.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | INTEGER | PRIMARY KEY | Hymn number (NOT auto-increment) |
+| `sokajy_id` | INTEGER | FOREIGN KEY, NULLABLE | References `sokajy(id)` (optional category) |
+| `lohateny` | VARCHAR(255) | NOT NULL | Hymn title (extracted from first verse first line) |
+| `isa_andininy` | INTEGER | NOT NULL | Total number of verses in hymn |
+| `mpanoratra` | VARCHAR(255) | NULLABLE | Composer/author name (may be null) |
+| `collection` | VARCHAR(50) | NOT NULL, INDEX | Collection source: "FFPM", "FANAMPINY", "ANTEMA" |
+
+**Important Notes:**
+- `id` is the hymn number itself (e.g., hymn #1 has id=1)
+- `lohateny` (title) is extracted from the first line of the first verse
+- Each hymn can have multiple verses stored in `tononkira` table
+
+#### 4c. `tononkira` (Hymn Verses)
+
+Stores individual verses for each hymn with full-text search support.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | SERIAL | PRIMARY KEY | Auto-increment ID |
+| `hira_id` | INTEGER | NOT NULL, FOREIGN KEY | References `hira(id)` |
+| `andininy` | INTEGER | NOT NULL | Verse number within hymn (1, 2, 3, ...) |
+| `tononkira` | TEXT | NOT NULL | Verse lyrics text with `\n` for line breaks |
+| `fiverenany` | BOOLEAN | DEFAULT FALSE | TRUE if this verse is a refrain/chorus |
+| `search_vector` | TSVECTOR | | Full-text search index (auto-updated) |
+
+**CRITICAL Display Requirements:**
+- `tononkira` text contains `\n` characters representing line breaks
+- Frontend MUST use `whiteSpace: 'pre-line'` CSS to preserve line breaks
+- Verses must be displayed with their number (e.g., "1.", "2.", etc.)
+- Refrains should be visually distinguished (different background color)
+
+**Example Data:**
+```sql
+-- Hymn #1: "Andriananahary masina indrindra!"
+INSERT INTO hira (id, sokajy_id, lohateny, isa_andininy, mpanoratra, collection)
+VALUES (1, NULL, 'Andriananahary masina indrindra!', 5, NULL, 'FFPM');
+
+INSERT INTO tononkira (hira_id, andininy, tononkira, fiverenany) VALUES
+(1, 1, 'Andriananahary masina indrindra!\nNy anjelinao izay mitoetra Aminao\nMifamaly hoe : Masina indrindra\nAndriananahary, Telo Izay Iray.', FALSE),
+(1, 2, 'Andriananahary masina indrindra!\nNa tsy hita aza izao ny voninahitrao!\nMasina indrindra Hianao irery.\nAndriananahary, Telo Izay Iray.', FALSE);
+-- ... verses 3-5
+```
+
+**Display Format:**
+```
+1. Andriananahary masina indrindra!
+   Ny anjelinao izay mitoetra Aminao
+   Mifamaly hoe : Masina indrindra
+   Andriananahary, Telo Izay Iray.
+
+2. Andriananahary masina indrindra!
+   Na tsy hita aza izao ny voninahitrao!
+   Masina indrindra Hianao irery.
+   Andriananahary, Telo Izay Iray.
+```
 
 **Indexes:**
-- `idx_chant_numero_source` on `(numero, source)` (UNIQUE, hymn number per collection)
-- `idx_chant_search` on `search_vector` USING GIN (for full-text search)
-- `idx_chant_source` on `source` (for filtering by collection)
+- `idx_hira_collection` on `collection` (for filtering by collection)
+- `idx_tononkira_hira_andininy` on `(hira_id, andininy)` (for ordered verse retrieval)
+- `idx_tononkira_search` on `search_vector` USING GIN (for full-text search)
 
 **Constraints:**
-- `check_source`: `source IN ('ffpm', 'fanampiny', 'antema')`
-- `check_numero`: `numero > 0`
-- UNIQUE constraint on `(numero, source)` (same number can exist in different collections)
+- `fk_hira_sokajy`: FOREIGN KEY `sokajy_id` REFERENCES `sokajy(id)` ON DELETE SET NULL
+- `fk_tononkira_hira`: FOREIGN KEY `hira_id` REFERENCES `hira(id)` ON DELETE CASCADE
+- `check_collection`: `collection IN ('FFPM', 'FANAMPINY', 'ANTEMA')`
+- `check_isa_andininy`: `isa_andininy > 0`
+- `check_andininy`: `andininy > 0`
 
 **Triggers:**
 ```sql
--- Auto-update search_vector when titre or paroles change
-CREATE TRIGGER chant_tsvectorupdate BEFORE INSERT OR UPDATE
-ON chant FOR EACH ROW EXECUTE FUNCTION
-tsvector_update_trigger(search_vector, 'pg_catalog.simple', titre, paroles);
-```
-
-**Sample Data:**
-```sql
-INSERT INTO chant (numero, titre, paroles, source, compositeur) VALUES
-(1, 'Miainga isika', 'Miainga isika\nHandeha any Ziona...\n(Refrain)', 'ffpm', NULL),
-(125, 'Jesosy Tompo', 'Jesosy Tompo soa\nMitaraina aminao aho...', 'ffpm', 'Andriamanitra Jehovah'),
-(1, 'Fihirana fanampiny', 'Midera an''Andriamanitra...', 'fanampiny', NULL);
--- search_vector auto-populated by trigger
+-- Auto-update search_vector when tononkira text changes
+CREATE TRIGGER tononkira_tsvectorupdate BEFORE INSERT OR UPDATE
+ON tononkira FOR EACH ROW EXECUTE FUNCTION
+tsvector_update_trigger(search_vector, 'pg_catalog.simple', tononkira);
 ```
 
 ---
@@ -268,23 +321,39 @@ WHERE v.livre_nom = 'Jaona'
 -- Uses indexes through view
 ```
 
-**6. Get hymn by number and collection**
+**6. Get hymn by ID with all verses**
 ```sql
-SELECT * FROM chant
-WHERE numero = $1 AND source = $2;
--- Uses idx_chant_numero_source (UNIQUE index)
+SELECT h.*, array_agg(t.* ORDER BY t.andininy) AS verses
+FROM hira h
+LEFT JOIN tononkira t ON h.id = t.hira_id
+WHERE h.id = $1
+GROUP BY h.id;
+-- Uses primary key on hira, idx_tononkira_hira_andininy for verses
 ```
 
-**7. Search hymns by content (full-text)**
+**7. Search hymns by content (full-text in verses)**
 ```sql
-SELECT id, numero, titre, source,
-       ts_rank(search_vector, query) AS rank
-FROM chant,
+SELECT DISTINCT h.id, h.lohateny, h.collection, h.isa_andininy,
+       MAX(ts_rank(t.search_vector, query)) AS rank
+FROM hira h
+JOIN tononkira t ON h.id = t.hira_id,
      to_tsquery('simple', 'Jesosy') AS query
-WHERE search_vector @@ query
+WHERE t.search_vector @@ query
+   OR h.lohateny ILIKE '%Jesosy%'
+GROUP BY h.id
 ORDER BY rank DESC
 LIMIT 50 OFFSET 0;
--- Uses idx_chant_search (GIN index)
+-- Uses idx_tononkira_search (GIN index)
+```
+
+**8. Get all hymns from a collection (list view)**
+```sql
+SELECT id, lohateny, isa_andininy, collection
+FROM hira
+WHERE collection = 'FFPM'
+ORDER BY id
+LIMIT 50 OFFSET 0;
+-- Uses idx_hira_collection
 ```
 
 ### Expected Performance
@@ -331,21 +400,26 @@ flask validate --check=bible
 
 **Step 3: Import Fihirana data**
 ```bash
-# Download Fihirana-FFPM repository
-git clone https://github.com/Rohan29-AN/Fihirana-FFPM.git data/Fihirana-FFPM
+# Import using the GitHub SQL import script
+docker-compose exec backend python src/scripts/import_github_sql_simple.py
 
-# Run import command
-flask fihirana import --source=./data/Fihirana-FFPM
-
-# Validate import
-flask validate --check=fihirana
+# When prompted, choose:
+# - '1' for FFPM only (for testing)
+# - 'all' for all three collections (FFPM, FANAMPINY, ANTEMA)
 ```
 
 **Expected output:**
-- ~300-500 hymns from `01_fihirana_ffpm.json`
-- ~100-200 hymns from `02_fihirana_fanampiny.json`
-- ~50-100 antiphons from `03_antema.json`
-- Total: ~500-1000 hymns
+- **FFPM**: ~797 hymns with ~3,222 verses from `01_fihirana_ffpm.sql`
+- **FANAMPINY**: ~82 hymns from `02_fihirana_fanampiny.sql`
+- **ANTEMA**: ~117 antiphons from `03_antema.sql`
+- **Total**: ~996 hymns with proper verse separation and line breaks
+
+**IMPORTANT**: The import script:
+1. Downloads SQL files directly from GitHub
+2. Parses INSERT statements preserving `\n` line breaks
+3. Extracts titles from first verse first line
+4. Creates both `hira` (hymn metadata) and `tononkira` (verses) records
+5. Updates search vectors for full-text search
 
 ### Schema Versioning
 
@@ -364,12 +438,18 @@ Use Alembic/Flask-Migrate for all schema changes:
 | `livre` | 66 | ~200 bytes | ~13 KB |
 | `chapitre` | ~1,200 | ~50 bytes | ~60 KB |
 | `verset` | ~31,000 | ~500 bytes | ~15 MB |
-| `chant` | ~800 | ~2 KB | ~1.6 MB |
-| **Total Data** | | | **~17 MB** |
-| **Indexes (GIN + B-tree)** | | | **~30 MB** |
-| **Total Database** | | | **~50 MB** |
+| `sokajy` | ~10 | ~100 bytes | ~1 KB |
+| `hira` | ~1,000 | ~300 bytes | ~300 KB |
+| `tononkira` | ~4,000 | ~500 bytes | ~2 MB |
+| **Total Data** | | | **~18 MB** |
+| **Indexes (GIN + B-tree)** | | | **~35 MB** |
+| **Total Database** | | | **~55 MB** |
 
 *Estimates include PostgreSQL overhead and search indexes*
+
+**Current Actual Data (FFPM only):**
+- `hira`: 797 hymns
+- `tononkira`: 3,222 verses
 
 ---
 
@@ -396,13 +476,20 @@ Use Alembic/Flask-Migrate for all schema changes:
 - `texte`: Required, non-empty string
 - Unique constraint: (chapitre_id, numero)
 
-**Chant model:**
-- `numero`: Required, integer > 0
-- `paroles`: Required, non-empty string
-- `source`: Required, must be "ffpm", "fanampiny", or "antema"
-- `titre`: Optional (metadata incomplete in source data)
-- `compositeur`: Optional (metadata incomplete)
-- Unique constraint: (numero, source)
+**Hira model:**
+- `id`: Required, integer > 0 (hymn number, NOT auto-increment)
+- `lohateny`: Required, non-empty string (extracted from first verse)
+- `isa_andininy`: Required, integer > 0 (number of verses)
+- `collection`: Required, must be "FFPM", "FANAMPINY", or "ANTEMA"
+- `mpanoratra`: Optional (composer/author name)
+- `sokajy_id`: Optional foreign key
+
+**Tononkira model:**
+- `hira_id`: Required, valid foreign key to `hira(id)`
+- `andininy`: Required, integer > 0 (verse number)
+- `tononkira`: Required, non-empty string with `\n` for line breaks
+- `fiverenany`: Boolean, defaults to FALSE (TRUE for refrains)
+- Relationship: Multiple tononkira per hira (one-to-many)
 
 ---
 
