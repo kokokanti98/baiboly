@@ -41,9 +41,10 @@ class Hira(db.Model):
     Hira (Hymn) model representing a complete hymn.
 
     Attributes:
-        id: Primary key (hymn number)
+        id: Primary key (unique ID with offset per collection)
+        numero_affiche: Display number (actual hymn number shown to users)
         sokajy_id: Foreign key to category
-        lohateny: Hymn title
+        lohateny: Hymn title (formatted with prefix for ANTEMA/FANAMPINY)
         isa_andininy: Number of verses
         mpanoratra: Author/composer
         collection: Collection name (FFPM, Fanampiny, etc.)
@@ -52,9 +53,10 @@ class Hira(db.Model):
     """
     __tablename__ = 'hira'
 
-    id = Column(Integer, primary_key=True)  # This is the hymn number
+    id = Column(Integer, primary_key=True)  # Unique ID with offset
+    numero_affiche = Column(Integer, nullable=False, index=True)  # Display number
     sokajy_id = Column(Integer, ForeignKey('sokajy.id'), nullable=True)
-    lohateny = Column(String(255), nullable=False)  # Title
+    lohateny = Column(String(255), nullable=False)  # Title with prefix
     isa_andininy = Column(Integer, nullable=False)  # Number of verses
     mpanoratra = Column(String(255), nullable=True)  # Author
     collection = Column(String(50), nullable=False, default='FFPM', index=True)
@@ -86,7 +88,8 @@ class Hira(db.Model):
         """
         result = {
             'id': self.id,
-            'numero': self.id,  # For compatibility
+            'numero': self.numero_affiche,  # Display number
+            'numero_affiche': self.numero_affiche,  # Explicit field
             'lohateny': self.lohateny,
             'titre': self.lohateny,  # For compatibility
             'isa_andininy': self.isa_andininy,

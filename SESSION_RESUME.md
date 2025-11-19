@@ -55,6 +55,30 @@
 
 ## 🔧 Problèmes Résolus Récemment
 
+### 4. Numérotation et Titres des Collections Fihirana (2025-11-19)
+**Problème:** Les chansons de collections différentes (FFPM, FANAMPINY, ANTEMA) avec le même numéro étaient confondues. Par exemple, ANTEMA #1 et FFPM #1 sont deux chansons différentes.
+
+**Solution Implémentée:**
+- ✅ Ajout du champ `numero_affiche` distinct de l'ID
+- ✅ Calcul du numéro d'affichage : ANTEMA (id-2000), FANAMPINY (id-1000), FFPM (id)
+- ✅ Formatage des titres avec préfixes :
+  - FFPM : "36 Andriananahary masina..."
+  - FANAMPINY : "FNMP - 1 Hira Faneva..."
+  - ANTEMA : "ANT - 1 Antema..."
+- ✅ Mise à jour des services backend pour rechercher par `numero_affiche`
+- ✅ Ré-import de toutes les données avec les nouveaux formats
+
+**Fichiers modifiés:**
+- `backend/src/models/fihirana.py` (ajout `numero_affiche`)
+- `backend/src/scripts/import_fihirana_json.py` (formatage des titres)
+- `backend/src/services/fihirana_service.py` (recherche par `numero_affiche`)
+- Base de données : migration ajout colonne + index
+
+**Résultat:**
+- ANTEMA #1 → ID 2001, numero_affiche=1, titre="ANT - 1 Antema..."
+- FANAMPINY #1 → ID 1001, numero_affiche=1, titre="FNMP - 1 Hira Faneva..."
+- FFPM #36 → ID 36, numero_affiche=36, titre="36 Andriananahary..."
+
 ### 3. Système de Backup et Restauration Automatique (2025-11-19)
 **Problème:** Pas de mécanisme pour sauvegarder et restaurer facilement les données de la base.
 
@@ -156,13 +180,19 @@ specs/001-bible-hymnal-reader/
 
 ### Table: hira (hymnes)
 ```sql
-id            INTEGER PRIMARY KEY     -- Numéro de la chanson (avec offset par collection)
+id            INTEGER PRIMARY KEY     -- ID unique avec offset (FFPM: 1-814, FANAMPINY: 1001-1054, ANTEMA: 2001-2024)
+numero_affiche INTEGER NOT NULL       -- Numéro affiché aux utilisateurs (ANTEMA: id-2000, FANAMPINY: id-1000, FFPM: id)
 sokajy_id     INTEGER                 -- Catégorie (optionnel)
-lohateny      VARCHAR(255)            -- Titre (extrait du 1er verset)
+lohateny      VARCHAR(255)            -- Titre formaté avec préfixe (ANT - 1, FNMP - 1, ou numero pour FFPM)
 isa_andininy  INTEGER                 -- Nombre de versets
 mpanoratra    VARCHAR(255)            -- Auteur (optionnel)
 collection    VARCHAR(50)             -- FFPM, FANAMPINY, ou ANTEMA
 ```
+
+**Exemples de titres formatés :**
+- FFPM : "36 Andriananahary masina..."
+- FANAMPINY : "FNMP - 1 Hira Faneva..."
+- ANTEMA : "ANT - 1 Antema..."
 
 ### Table: tononkira (versets)
 ```sql

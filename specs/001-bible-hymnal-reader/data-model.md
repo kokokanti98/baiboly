@@ -164,16 +164,21 @@ Stores hymn metadata with one record per hymn.
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| `id` | INTEGER | PRIMARY KEY | Hymn number (NOT auto-increment) |
+| `id` | INTEGER | PRIMARY KEY | Unique ID with collection offset (FFPM: 1-814, FANAMPINY: 1001-1054, ANTEMA: 2001-2024) |
+| `numero_affiche` | INTEGER | NOT NULL, INDEX | Display number shown to users (ANTEMA: id-2000, FANAMPINY: id-1000, FFPM: id) |
 | `sokajy_id` | INTEGER | FOREIGN KEY, NULLABLE | References `sokajy(id)` (optional category) |
-| `lohateny` | VARCHAR(255) | NOT NULL | Hymn title (extracted from first verse first line) |
+| `lohateny` | VARCHAR(255) | NOT NULL | Hymn title with prefix (ANT - 1, FNMP - 1, or just numero for FFPM) |
 | `isa_andininy` | INTEGER | NOT NULL | Total number of verses in hymn |
 | `mpanoratra` | VARCHAR(255) | NULLABLE | Composer/author name (may be null) |
 | `collection` | VARCHAR(50) | NOT NULL, INDEX | Collection source: "FFPM", "FANAMPINY", "ANTEMA" |
 
 **Important Notes:**
-- `id` is the hymn number itself (e.g., hymn #1 has id=1)
-- `lohateny` (title) is extracted from the first line of the first verse
+- `id` is a unique identifier with offset to avoid conflicts between collections
+- `numero_affiche` is the actual hymn number displayed to users (e.g., ANTEMA #1 has id=2001, numero_affiche=1)
+- `lohateny` (title) is formatted with collection prefix:
+  - FFPM: "36 Mba mitadiava..." (numero only)
+  - FANAMPINY: "FNMP - 1 Hira Faneva..."
+  - ANTEMA: "ANT - 1 Antema..."
 - Each hymn can have multiple verses stored in `tononkira` table
 
 #### 4c. `tononkira` (Hymn Verses)
@@ -197,9 +202,17 @@ Stores individual verses for each hymn with full-text search support.
 
 **Example Data:**
 ```sql
--- Hymn #1: "Andriananahary masina indrindra!"
-INSERT INTO hira (id, sokajy_id, lohateny, isa_andininy, mpanoratra, collection)
-VALUES (1, NULL, 'Andriananahary masina indrindra!', 5, NULL, 'FFPM');
+-- Hymn #1 FFPM: "1 Andriananahary masina indrindra!"
+INSERT INTO hira (id, numero_affiche, sokajy_id, lohateny, isa_andininy, mpanoratra, collection)
+VALUES (1, 1, NULL, '1 Andriananahary masina indrindra!', 5, NULL, 'FFPM');
+
+-- Hymn #1 FANAMPINY: "FNMP - 1 Hira Faneva..."
+INSERT INTO hira (id, numero_affiche, sokajy_id, lohateny, isa_andininy, mpanoratra, collection)
+VALUES (1001, 1, NULL, 'FNMP - 1 Hira Faneva Faha-30 Taonan''ny Fjkm', 4, NULL, 'FANAMPINY');
+
+-- Hymn #1 ANTEMA: "ANT - 1 Antema"
+INSERT INTO hira (id, numero_affiche, sokajy_id, lohateny, isa_andininy, mpanoratra, collection)
+VALUES (2001, 1, NULL, 'ANT - 1 Antema', 1, NULL, 'ANTEMA');
 
 INSERT INTO tononkira (hira_id, andininy, tononkira, fiverenany) VALUES
 (1, 1, 'Andriananahary masina indrindra!\nNy anjelinao izay mitoetra Aminao\nMifamaly hoe : Masina indrindra\nAndriananahary, Telo Izay Iray.', FALSE),

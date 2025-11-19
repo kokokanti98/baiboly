@@ -29,6 +29,29 @@ def extract_title_from_tononkira(tononkira_text: str) -> str:
     return tononkira_text[:100].strip()
 
 
+def format_title_with_prefix(collection: str, numero_affiche: int, raw_title: str) -> str:
+    """
+    Format title with collection prefix.
+
+    Args:
+        collection: Collection name (FFPM, FANAMPINY, ANTEMA)
+        numero_affiche: Display number (without offset)
+        raw_title: Raw title extracted from first verse
+
+    Returns:
+        Formatted title with prefix
+        - ANTEMA: "ANT - 1 <raw_title>"
+        - FANAMPINY: "FNMP - 1 <raw_title>"
+        - FFPM: "<numero_affiche> <raw_title>" (no prefix)
+    """
+    if collection == 'ANTEMA':
+        return f"ANT - {numero_affiche} {raw_title}"
+    elif collection == 'FANAMPINY':
+        return f"FNMP - {numero_affiche} {raw_title}"
+    else:  # FFPM
+        return f"{numero_affiche} {raw_title}"
+
+
 def import_collection(json_data: dict, collection: str, id_offset: int = 0):
     """
     Import a collection from JSON data.
@@ -57,25 +80,38 @@ def import_collection(json_data: dict, collection: str, id_offset: int = 0):
         # Add offset to create unique ID across collections
         unique_id = laharana + id_offset
 
-        lohateny = hymn_data.get('lohateny', '')
+        # Calculate display number (numero_affiche)
+        # ANTEMA: id - 2000, FANAMPINY: id - 1000, FFPM: id
+        if collection == 'ANTEMA':
+            numero_affiche = unique_id - 2000
+        elif collection == 'FANAMPINY':
+            numero_affiche = unique_id - 1000
+        else:  # FFPM
+            numero_affiche = unique_id
+
+        # Extract raw title
+        raw_lohateny = hymn_data.get('lohateny', '')
         mpanoratra = hymn_data.get('mpanoratra', [])
         hira_verses = hymn_data.get('hira', [])
 
         # If no title provided, extract from first verse
-        if not lohateny and hira_verses:
+        if not raw_lohateny and hira_verses:
             first_verse = hira_verses[0]
-            lohateny = extract_title_from_tononkira(first_verse['tononkira'])
+            raw_lohateny = extract_title_from_tononkira(first_verse['tononkira'])
 
-        # Create Hira record with unique ID
+        # Format title with prefix (ANT - 1, FNMP - 1, or just numero for FFPM)
+        formatted_lohateny = format_title_with_prefix(collection, numero_affiche, raw_lohateny)
+
+        # Create Hira record with unique ID and display number
         hira = Hira(
             id=unique_id,
+            numero_affiche=numero_affiche,
             sokajy_id=None,
-            lohateny=lohateny,
+            lohateny=formatted_lohateny,
             isa_andininy=len(hira_verses),
             mpanoratra=', '.join(mpanoratra) if mpanoratra else None,
             collection=collection
         )
-        # Store original number as metadata (we'll add a field for this)
         db.session.add(hira)
         hira_created += 1
 

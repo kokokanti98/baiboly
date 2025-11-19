@@ -136,14 +136,14 @@ class FihiranaService:
                 .subquery()
             )
 
-            # Try to parse query as number for direct ID search
+            # Try to parse query as number for direct display number search
             try:
                 numero = int(query_text)
                 query = self.session.query(Hira).filter(
                     or_(
                         Hira.lohateny.ilike(search_term),
                         Hira.id.in_(hira_ids_from_verses),
-                        Hira.id == numero
+                        Hira.numero_affiche == numero  # Search by display number
                     )
                 )
             except ValueError:
