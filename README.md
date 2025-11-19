@@ -92,11 +92,26 @@ docker-compose logs -f frontend     # Frontend only
 ```
 
 ### Database Management
-Start pgAdmin:
+
+**pgAdmin:**
 ```bash
 docker-compose --profile tools up -d pgadmin
 ```
 Access: http://localhost:5050 (admin@baiboly.local / admin)
+
+**Backup & Restore:**
+See [backend/DATABASE_BACKUP.md](backend/DATABASE_BACKUP.md) for complete documentation.
+
+```bash
+# Create backup
+docker-compose exec -T db pg_dump -U baiboly_user -d baiboly_dev --clean --if-exists > backend/db_backup.sql
+
+# Restore backup (automatic on first run)
+docker-compose down -v
+docker-compose up -d
+```
+
+**Note:** The database is automatically initialized with all data (892 hymns, Bible books) on first run.
 
 ### Rebuild Containers
 ```bash

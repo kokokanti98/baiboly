@@ -184,6 +184,21 @@ docker-compose exec backend python src/scripts/import_fihirana_json.py
 # Choisir 'y' pour effacer, puis 'all' pour importer les 3 collections
 ```
 
+### Backup & Restauration de la Base de Données
+```bash
+# Créer un backup
+docker-compose exec -T db pg_dump -U baiboly_user -d baiboly_dev --clean --if-exists > backend/db_backup.sql
+
+# Restaurer automatiquement (supprime toutes les données!)
+docker-compose down -v
+docker-compose up -d
+
+# Voir la documentation complète
+cat backend/DATABASE_BACKUP.md
+```
+
+**Note:** Le backup est automatiquement importé lors du premier démarrage si la base est vide.
+
 ## 🌐 URLs
 
 - **Frontend:** http://localhost:5173
