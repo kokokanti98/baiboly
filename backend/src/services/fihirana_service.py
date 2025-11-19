@@ -136,12 +136,24 @@ class FihiranaService:
                 .subquery()
             )
 
-            query = self.session.query(Hira).filter(
-                or_(
-                    Hira.lohateny.ilike(search_term),
-                    Hira.id.in_(hira_ids_from_verses)
+            # Try to parse query as number for direct ID search
+            try:
+                numero = int(query_text)
+                query = self.session.query(Hira).filter(
+                    or_(
+                        Hira.lohateny.ilike(search_term),
+                        Hira.id.in_(hira_ids_from_verses),
+                        Hira.id == numero
+                    )
                 )
-            )
+            except ValueError:
+                # Not a number, search only in text
+                query = self.session.query(Hira).filter(
+                    or_(
+                        Hira.lohateny.ilike(search_term),
+                        Hira.id.in_(hira_ids_from_verses)
+                    )
+                )
 
             if collection:
                 query = query.filter(Hira.collection == collection)
@@ -194,12 +206,24 @@ class FihiranaService:
                 .subquery()
             )
 
-            query = self.session.query(func.count(Hira.id)).filter(
-                or_(
-                    Hira.lohateny.ilike(search_term),
-                    Hira.id.in_(hira_ids_from_verses)
+            # Try to parse query as number for direct ID search
+            try:
+                numero = int(query_text)
+                query = self.session.query(func.count(Hira.id)).filter(
+                    or_(
+                        Hira.lohateny.ilike(search_term),
+                        Hira.id.in_(hira_ids_from_verses),
+                        Hira.id == numero
+                    )
                 )
-            )
+            except ValueError:
+                # Not a number, search only in text
+                query = self.session.query(func.count(Hira.id)).filter(
+                    or_(
+                        Hira.lohateny.ilike(search_term),
+                        Hira.id.in_(hira_ids_from_verses)
+                    )
+                )
 
             if collection:
                 query = query.filter(Hira.collection == collection)

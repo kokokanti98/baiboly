@@ -251,7 +251,7 @@ const FihiranaSearch: React.FC = () => {
                       </Box>
                     }
                     secondary={
-                      result.paroles ? (
+                      result.paroles && result.paroles.length > 0 ? (
                         <Typography
                           component="span"
                           variant="body2"
@@ -259,7 +259,7 @@ const FihiranaSearch: React.FC = () => {
                           sx={{ lineHeight: 1.8, display: 'block', mt: 1 }}
                         >
                           {highlightQuery(
-                            result.paroles.substring(0, 200) + (result.paroles.length > 200 ? '...' : ''),
+                            result.paroles?.substring(0, 200) + (result.paroles && result.paroles.length > 200 ? '...' : ''),
                             query
                           )}
                         </Typography>
