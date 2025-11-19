@@ -7,6 +7,7 @@ import Header from './components/Layout/Header';
 import HomePage from './pages/HomePage';
 import BiblePage from './pages/BiblePage';
 import FihiranaPage from './pages/FihiranaPage';
+import FihiranaDetail from './components/Fihirana/FihiranaDetail';
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
               <Route path="/" element={<HomePage />} />
               <Route path="/bible" element={<BiblePage />} />
               <Route path="/fihirana" element={<FihiranaPage />} />
+              <Route path="/fihirana/:id" element={<FihiranaDetail />} />
             </Routes>
           </Box>
         </Box>

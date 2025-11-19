@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Card,
@@ -32,6 +33,7 @@ interface FihiranaReaderProps {
 
 const FihiranaReader: React.FC<FihiranaReaderProps> = ({ fihiranaId }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [fihiranas, setFihiranas] = useState<Fihirana[]>([]);
   const [selectedFihirana, setSelectedFihirana] = useState<Fihirana | null>(null);
   const [loading, setLoading] = useState(false);
@@ -153,7 +155,7 @@ const FihiranaReader: React.FC<FihiranaReaderProps> = ({ fihiranaId }) => {
                       <ListItem key={fihirana.id} disablePadding>
                         <ListItemButton
                           selected={selectedFihirana?.id === fihirana.id}
-                          onClick={() => handleFihiranaClick(fihirana)}
+                          onClick={() => navigate(`/fihirana/${fihirana.id}`)}
                         >
                           <ListItemText
                             primary={`${fihirana.numero}. ${fihirana.titre}`}

@@ -1,11 +1,12 @@
 """
 Fihirana service for business logic related to hymns data access.
 Provides methods to retrieve and search fihirana.
+Uses the new verse-based structure (Hira, Tononkira) with fallback to legacy.
 """
 from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session
-from sqlalchemy import func
-from src.models.fihirana import Fihirana
+from sqlalchemy import func, or_
+from src.models.fihirana import Hira, Tononkira, Sokajy, Fihirana
 
 
 class FihiranaService:
@@ -22,6 +23,8 @@ class FihiranaService:
             session: SQLAlchemy database session
         """
         self.session = session
+        # Check if new structure exists
+        self.use_new_structure = session.query(Hira).count() > 0
 
     def get_all_fihirana(
         self, collection: Optional[str] = None, limit: int = 100, offset: int = 0
@@ -37,28 +40,41 @@ class FihiranaService:
         Returns:
             List of fihirana dictionaries
         """
-        query = self.session.query(Fihirana).order_by(
-            Fihirana.collection, Fihirana.numero
-        )
+        if self.use_new_structure:
+            query = self.session.query(Hira).order_by(Hira.collection, Hira.id)
 
-        if collection:
-            query = query.filter(Fihirana.collection == collection)
+            if collection:
+                query = query.filter(Hira.collection == collection)
 
-        fihiranas = query.limit(limit).offset(offset).all()
-        return [fihirana.to_dict() for fihirana in fihiranas]
+            hiras = query.limit(limit).offset(offset).all()
+            return [hira.to_dict(include_verses=False) for hira in hiras]
+        else:
+            query = self.session.query(Fihirana).order_by(
+                Fihirana.collection, Fihirana.numero
+            )
+
+            if collection:
+                query = query.filter(Fihirana.collection == collection)
+
+            fihiranas = query.limit(limit).offset(offset).all()
+            return [fihirana.to_dict() for fihirana in fihiranas]
 
     def get_fihirana_by_id(self, fihirana_id: int) -> Optional[Dict[str, Any]]:
         """
-        Get a specific fihirana by ID.
+        Get a specific fihirana by ID with all verses.
 
         Args:
             fihirana_id: ID of the fihirana
 
         Returns:
-            Fihirana dictionary or None if not found
+            Fihirana dictionary with verses or None if not found
         """
-        fihirana = self.session.query(Fihirana).filter(Fihirana.id == fihirana_id).first()
-        return fihirana.to_dict() if fihirana else None
+        if self.use_new_structure:
+            hira = self.session.query(Hira).filter(Hira.id == fihirana_id).first()
+            return hira.to_dict(include_verses=True) if hira else None
+        else:
+            fihirana = self.session.query(Fihirana).filter(Fihirana.id == fihirana_id).first()
+            return fihirana.to_dict() if fihirana else None
 
     def get_fihirana_by_number(
         self, numero: int, collection: Optional[str] = None
@@ -71,15 +87,24 @@ class FihiranaService:
             collection: Collection name (optional)
 
         Returns:
-            Fihirana dictionary or None if not found
+            Fihirana dictionary with verses or None if not found
         """
-        query = self.session.query(Fihirana).filter(Fihirana.numero == numero)
+        if self.use_new_structure:
+            query = self.session.query(Hira).filter(Hira.id == numero)
 
-        if collection:
-            query = query.filter(Fihirana.collection == collection)
+            if collection:
+                query = query.filter(Hira.collection == collection)
 
-        fihirana = query.first()
-        return fihirana.to_dict() if fihirana else None
+            hira = query.first()
+            return hira.to_dict(include_verses=True) if hira else None
+        else:
+            query = self.session.query(Fihirana).filter(Fihirana.numero == numero)
+
+            if collection:
+                query = query.filter(Fihirana.collection == collection)
+
+            fihirana = query.first()
+            return fihirana.to_dict() if fihirana else None
 
     def search_fihirana(
         self,
@@ -102,21 +127,49 @@ class FihiranaService:
         """
         search_term = f"%{query_text}%"
 
-        query = self.session.query(Fihirana).filter(
-            (Fihirana.titre.ilike(search_term)) | (Fihirana.paroles.ilike(search_term))
-        )
+        if self.use_new_structure:
+            # Search in Hira titles and Tononkira verses
+            hira_ids_from_verses = (
+                self.session.query(Tononkira.hira_id)
+                .filter(Tononkira.tononkira.ilike(search_term))
+                .distinct()
+                .subquery()
+            )
 
-        if collection:
-            query = query.filter(Fihirana.collection == collection)
+            query = self.session.query(Hira).filter(
+                or_(
+                    Hira.lohateny.ilike(search_term),
+                    Hira.id.in_(hira_ids_from_verses)
+                )
+            )
 
-        fihiranas = (
-            query.order_by(Fihirana.collection, Fihirana.numero)
-            .limit(limit)
-            .offset(offset)
-            .all()
-        )
+            if collection:
+                query = query.filter(Hira.collection == collection)
 
-        return [fihirana.to_dict() for fihirana in fihiranas]
+            hiras = (
+                query.order_by(Hira.collection, Hira.id)
+                .limit(limit)
+                .offset(offset)
+                .all()
+            )
+
+            return [hira.to_dict(include_verses=False) for hira in hiras]
+        else:
+            query = self.session.query(Fihirana).filter(
+                (Fihirana.titre.ilike(search_term)) | (Fihirana.paroles.ilike(search_term))
+            )
+
+            if collection:
+                query = query.filter(Fihirana.collection == collection)
+
+            fihiranas = (
+                query.order_by(Fihirana.collection, Fihirana.numero)
+                .limit(limit)
+                .offset(offset)
+                .all()
+            )
+
+            return [fihirana.to_dict() for fihirana in fihiranas]
 
     def count_search_results(
         self, query_text: str, collection: Optional[str] = None
@@ -133,14 +186,34 @@ class FihiranaService:
         """
         search_term = f"%{query_text}%"
 
-        query = self.session.query(func.count(Fihirana.id)).filter(
-            (Fihirana.titre.ilike(search_term)) | (Fihirana.paroles.ilike(search_term))
-        )
+        if self.use_new_structure:
+            hira_ids_from_verses = (
+                self.session.query(Tononkira.hira_id)
+                .filter(Tononkira.tononkira.ilike(search_term))
+                .distinct()
+                .subquery()
+            )
 
-        if collection:
-            query = query.filter(Fihirana.collection == collection)
+            query = self.session.query(func.count(Hira.id)).filter(
+                or_(
+                    Hira.lohateny.ilike(search_term),
+                    Hira.id.in_(hira_ids_from_verses)
+                )
+            )
 
-        return query.scalar()
+            if collection:
+                query = query.filter(Hira.collection == collection)
+
+            return query.scalar()
+        else:
+            query = self.session.query(func.count(Fihirana.id)).filter(
+                (Fihirana.titre.ilike(search_term)) | (Fihirana.paroles.ilike(search_term))
+            )
+
+            if collection:
+                query = query.filter(Fihirana.collection == collection)
+
+            return query.scalar()
 
     def count_by_collection(self, collection: Optional[str] = None) -> int:
         """
@@ -152,9 +225,17 @@ class FihiranaService:
         Returns:
             Count of fihirana
         """
-        query = self.session.query(func.count(Fihirana.id))
+        if self.use_new_structure:
+            query = self.session.query(func.count(Hira.id))
 
-        if collection:
-            query = query.filter(Fihirana.collection == collection)
+            if collection:
+                query = query.filter(Hira.collection == collection)
 
-        return query.scalar()
+            return query.scalar()
+        else:
+            query = self.session.query(func.count(Fihirana.id))
+
+            if collection:
+                query = query.filter(Fihirana.collection == collection)
+
+            return query.scalar()

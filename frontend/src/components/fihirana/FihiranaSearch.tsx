@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Card,
@@ -16,6 +17,7 @@ import {
   InputAdornment,
   IconButton,
   Divider,
+  ListItemButton,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
@@ -40,6 +42,7 @@ interface SearchResponse {
 
 const FihiranaSearch: React.FC = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [total, setTotal] = useState(0);
@@ -213,8 +216,20 @@ const FihiranaSearch: React.FC = () => {
         <>
           <List>
             {results.map((result) => (
-              <Card key={result.id} sx={{ mb: 2 }}>
-                <ListItem alignItems="flex-start">
+              <Card
+                key={result.id}
+                sx={{
+                  mb: 2,
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: 4,
+                  },
+                }}
+                onClick={() => navigate(`/fihirana/${result.id}`)}
+              >
+                <ListItemButton alignItems="flex-start">
                   <ListItemText
                     primary={
                       <Box display="flex" alignItems="center" gap={1} mb={1}>
@@ -247,7 +262,7 @@ const FihiranaSearch: React.FC = () => {
                       </Typography>
                     }
                   />
-                </ListItem>
+                </ListItemButton>
               </Card>
             ))}
           </List>
