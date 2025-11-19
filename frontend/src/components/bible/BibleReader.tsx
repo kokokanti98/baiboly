@@ -53,6 +53,12 @@ const BibleReader: React.FC<BibleReaderProps> = ({ livreId, chapitreId }) => {
   const [error, setError] = useState<string | null>(null);
   const [testamentFilter, setTestamentFilter] = useState<string | null>(null);
 
+  // Verse range selection
+  const [versetDebut, setVersetDebut] = useState<number | null>(null);
+  const [versetFin, setVersetFin] = useState<number | null>(null);
+  const [showVerseRangeSelection, setShowVerseRangeSelection] = useState(false);
+  const [totalVersetsInChapitre, setTotalVersetsInChapitre] = useState<number>(0);
+
   // Load all books on mount
   useEffect(() => {
     loadLivres();
@@ -127,7 +133,50 @@ const BibleReader: React.FC<BibleReaderProps> = ({ livreId, chapitreId }) => {
   };
 
   const handleChapitreClick = (chapitre: Chapitre) => {
-    loadChapitreDetails(chapitre.id);
+    // Show verse range selection instead of loading all verses
+    setSelectedChapitre(chapitre);
+    setShowVerseRangeSelection(true);
+    setVersetDebut(null);
+    setVersetFin(null);
+    setVersets([]);
+
+    // Get total verses in this chapter
+    api.get(`/bible/chapitres/${chapitre.id}/versets`)
+      .then(response => {
+        setTotalVersetsInChapitre(response.data.length);
+      })
+      .catch(err => {
+        console.error('Error getting chapter verses count:', err);
+      });
+  };
+
+  const loadVerseRange = async () => {
+    if (!selectedLivre || !selectedChapitre || versetDebut === null) {
+      setError('Safidio ny andininy voalohany');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const fin = versetFin || versetDebut; // If no end verse, use start verse
+      const response = await api.get('/bible/reference-range', {
+        params: {
+          livre: selectedLivre.abbrev || selectedLivre.nom,
+          chapitre: selectedChapitre.numero,
+          verset_debut: versetDebut,
+          verset_fin: fin,
+        },
+      });
+
+      setVersets(response.data.versets || []);
+      setShowVerseRangeSelection(false);
+    } catch (err: any) {
+      setError(err.message || t('errors.loadFailed'));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleTestamentFilter = (testament: string | null) => {
@@ -139,10 +188,13 @@ const BibleReader: React.FC<BibleReaderProps> = ({ livreId, chapitreId }) => {
   };
 
   const handleBack = () => {
-    if (versets.length > 0) {
+    if (versets.length > 0 || showVerseRangeSelection) {
       // Go back to chapters view
       setVersets([]);
       setSelectedChapitre(null);
+      setShowVerseRangeSelection(false);
+      setVersetDebut(null);
+      setVersetFin(null);
     } else if (chapitres.length > 0) {
       // Go back to books view
       setChapitres([]);
@@ -248,7 +300,7 @@ const BibleReader: React.FC<BibleReaderProps> = ({ livreId, chapitreId }) => {
       )}
 
       {/* Chapters List */}
-      {selectedLivre && chapitres.length > 0 && versets.length === 0 && (
+      {selectedLivre && chapitres.length > 0 && versets.length === 0 && !showVerseRangeSelection && (
         <Card>
           <CardContent>
             <Typography variant="h6" gutterBottom>
@@ -270,12 +322,83 @@ const BibleReader: React.FC<BibleReaderProps> = ({ livreId, chapitreId }) => {
         </Card>
       )}
 
+      {/* Verse Range Selection */}
+      {showVerseRangeSelection && selectedChapitre && (
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              {selectedLivre?.nom} {t('bible.chapter')} {selectedChapitre.numero}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" mb={2}>
+              Safidio ny andininy voalohany sy farany (total: {totalVersetsInChapitre} andininy)
+            </Typography>
+
+            <Box display="flex" flexDirection="column" gap={3}>
+              {/* Verset début */}
+              <Box>
+                <Typography variant="subtitle2" mb={1}>
+                  Andininy voalohany (début):
+                </Typography>
+                <Box display="flex" flexWrap="wrap" gap={1}>
+                  {Array.from({ length: totalVersetsInChapitre }, (_, i) => i + 1).map((num) => (
+                    <Chip
+                      key={`debut-${num}`}
+                      label={num}
+                      onClick={() => setVersetDebut(num)}
+                      color={versetDebut === num ? 'primary' : 'default'}
+                      variant={versetDebut === num ? 'filled' : 'outlined'}
+                      sx={{ minWidth: 44, minHeight: 44, fontSize: '1rem' }}
+                    />
+                  ))}
+                </Box>
+              </Box>
+
+              {/* Verset fin */}
+              {versetDebut !== null && (
+                <Box>
+                  <Typography variant="subtitle2" mb={1}>
+                    Andininy farany (fin) - optionnel:
+                  </Typography>
+                  <Box display="flex" flexWrap="wrap" gap={1}>
+                    {Array.from({ length: totalVersetsInChapitre - versetDebut + 1 }, (_, i) => versetDebut + i).map((num) => (
+                      <Chip
+                        key={`fin-${num}`}
+                        label={num}
+                        onClick={() => setVersetFin(num === versetDebut ? null : num)}
+                        color={versetFin === num ? 'secondary' : 'default'}
+                        variant={versetFin === num ? 'filled' : 'outlined'}
+                        sx={{ minWidth: 44, minHeight: 44, fontSize: '1rem' }}
+                      />
+                    ))}
+                  </Box>
+                </Box>
+              )}
+
+              {/* Load Button */}
+              {versetDebut !== null && (
+                <Box>
+                  <Chip
+                    label={`Asehoy: ${selectedLivre?.nom} ${selectedChapitre.numero}:${versetDebut}${versetFin ? `-${versetFin}` : ''}`}
+                    onClick={loadVerseRange}
+                    color="success"
+                    sx={{ minWidth: 44, minHeight: 44, fontSize: '1rem', fontWeight: 'bold' }}
+                  />
+                </Box>
+              )}
+            </Box>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Verses Display */}
       {versets.length > 0 && selectedChapitre && (
         <Card>
           <CardContent>
             <Typography variant="h6" gutterBottom>
-              {selectedLivre?.nom} {t('bible.chapter')} {selectedChapitre.numero}
+              {selectedLivre?.nom} {selectedChapitre.numero}:
+              {versets.length === 1
+                ? versets[0].numero
+                : `${versets[0].numero}-${versets[versets.length - 1].numero}`}
             </Typography>
             <Divider sx={{ my: 2 }} />
             <Box>
