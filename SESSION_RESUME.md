@@ -26,9 +26,14 @@
   - Par contenu des paroles (ex: "Jeso")
   - Fonctionne dans 2 onglets: Fihirana (avec barre intégrée) et Karohy (recherche dédiée)
 
-#### 🚧 Bible
-- Structure de base créée mais pas encore complètement implémentée
-- À développer dans les prochaines sessions
+#### ✅ Bible
+- **API Backend:** ✅ Fonctionnelle
+  - `GET /api/bible/livres` - Liste des livres
+  - `GET /api/bible/livres/{id}` - Détails d'un livre
+  - `GET /api/bible/chapitres/{livre_id}/{chapitre_num}` - Versets d'un chapitre
+  - `GET /api/bible/search` - Recherche dans la Bible
+- **Base de données:** ✅ Livres importés (Genesisy, Eksodosy, Nomery, etc.)
+- **Frontend:** ⚠️ À vérifier (composants peuvent exister mais statut non confirmé)
 
 ### Architecture Technique
 
