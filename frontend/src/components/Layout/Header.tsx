@@ -1,4 +1,4 @@
-import { AppBar, Toolbar, Typography, Button, Box } from '@mui/material';
+import { AppBar, Toolbar, Typography, Button, Box, useMediaQuery, useTheme } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import MusicNoteIcon from '@mui/icons-material/MusicNote';
@@ -9,38 +9,28 @@ const Header: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const isActive = (path: string) => location.pathname === path;
 
   return (
     <AppBar position="static" color="primary" elevation={2}>
-      <Toolbar>
-        {/* Logo/Title */}
-        <Typography
-          variant="h5"
-          component="div"
-          sx={{
-            flexGrow: 0,
-            fontWeight: 'bold',
-            mr: 4,
-            cursor: 'pointer',
-          }}
-          onClick={() => navigate('/')}
-        >
-          Baiboly
-        </Typography>
-
+      <Toolbar sx={{ gap: { xs: 0.5, sm: 1 } }}>
         {/* Navigation Buttons */}
-        <Box sx={{ flexGrow: 1, display: 'flex', gap: 1 }}>
+        <Box sx={{ flexGrow: 1, display: 'flex', gap: { xs: 0.5, sm: 1 } }}>
           <Button
             color="inherit"
-            startIcon={<HomeIcon />}
+            startIcon={isMobile ? undefined : <HomeIcon />}
             onClick={() => navigate('/')}
             sx={{
               backgroundColor: isActive('/') ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
               '&:hover': {
                 backgroundColor: 'rgba(255, 255, 255, 0.1)',
               },
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              px: { xs: 1, sm: 2 },
+              minWidth: { xs: 'auto', sm: '64px' },
             }}
           >
             {t('common.home')}
@@ -48,13 +38,16 @@ const Header: React.FC = () => {
 
           <Button
             color="inherit"
-            startIcon={<MenuBookIcon />}
+            startIcon={isMobile ? undefined : <MenuBookIcon />}
             onClick={() => navigate('/bible')}
             sx={{
               backgroundColor: isActive('/bible') ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
               '&:hover': {
                 backgroundColor: 'rgba(255, 255, 255, 0.1)',
               },
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              px: { xs: 1, sm: 2 },
+              minWidth: { xs: 'auto', sm: '64px' },
             }}
           >
             {t('navigation.bible')}
@@ -62,16 +55,19 @@ const Header: React.FC = () => {
 
           <Button
             color="inherit"
-            startIcon={<MusicNoteIcon />}
+            startIcon={isMobile ? undefined : <MusicNoteIcon />}
             onClick={() => navigate('/fihirana')}
             sx={{
               backgroundColor: isActive('/fihirana') ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
               '&:hover': {
                 backgroundColor: 'rgba(255, 255, 255, 0.1)',
               },
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              px: { xs: 1, sm: 2 },
+              minWidth: { xs: 'auto', sm: '64px' },
             }}
           >
-            {t('navigation.fihirana')}
+            Fihirana
           </Button>
         </Box>
       </Toolbar>
