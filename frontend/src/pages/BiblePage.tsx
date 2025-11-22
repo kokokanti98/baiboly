@@ -3,9 +3,9 @@ import { Box, Tabs, Tab, Container } from '@mui/material';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import SearchIcon from '@mui/icons-material/Search';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
-import BibleReader from '../components/Bible/BibleReader';
-import BibleSearch from '../components/Bible/BibleSearch';
-import BibleReferenceSearch from '../components/Bible/BibleReferenceSearch';
+import BibleReader from '../components/bible/BibleReader';
+import BibleSearch from '../components/bible/BibleSearch';
+import BibleReferenceSearch from '../components/bible/BibleReferenceSearch';
 import { useTranslation } from 'react-i18next';
 
 interface TabPanelProps {
