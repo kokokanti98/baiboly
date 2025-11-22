@@ -1,0 +1,317 @@
+name: CI/CD Pipeline - Baiboly
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:  # Permet déclenchement manuel
+
+env:
+  NODE_VERSION: '18'
+  PYTHON_VERSION: '3.9'
+
+jobs:
+  # Job 1: Tests Backend
+  test-backend:
+    name: Tests Backend (Python/Flask)
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Run linting (flake8)
+        run: |
+          cd backend
+          flake8 src/ --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 src/ --count --exit-zero --max-complexity=10 --max-line-length=100 --statistics
+      
+      - name: Run tests with coverage
+        run: |
+          cd backend
+          pytest --cov=src --cov-report=term --cov-report=xml --cov-fail-under=80
+      
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        if: github.event_name == 'pull_request'
+        with:
+          file: ./backend/coverage.xml
+          flags: backend
+          name: backend-coverage
+
+  # Job 2: Tests Frontend
+  test-frontend:
+    name: Tests Frontend (React/TypeScript)
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci --legacy-peer-deps
+      
+      - name: Run linting (ESLint)
+        run: |
+          cd frontend
+          npm run lint
+      
+      - name: Run tests with coverage
+        run: |
+          cd frontend
+          npm test -- --coverage --watchAll=false
+      
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        if: github.event_name == 'pull_request'
+        with:
+          file: ./frontend/coverage/coverage-final.json
+          flags: frontend
+          name: frontend-coverage
+
+  # Job 3: Build Frontend
+  build-frontend:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    needs: [test-backend, test-frontend]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci --legacy-peer-deps
+      
+      - name: Build production bundle
+        env:
+          VITE_API_BASE_URL: /api
+        run: |
+          cd frontend
+          npm run build
+      
+      - name: Check bundle size
+        run: |
+          cd frontend/dist
+          BUNDLE_SIZE=$(du -sb . | cut -f1)
+          echo "Bundle size: $BUNDLE_SIZE bytes"
+          # Warn if bundle > 5MB (5242880 bytes)
+          if [ $BUNDLE_SIZE -gt 5242880 ]; then
+            echo "⚠️ Warning: Bundle size exceeds 5MB"
+          fi
+      
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist/
+          retention-days: 7
+
+  # Job 4: Deploy to Production (only on push to main)
+  deploy-production:
+    name: Deploy to Production (VPS OVH)
+    runs-on: ubuntu-latest
+    needs: [build-frontend]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    environment:
+      name: production
+      url: https://${{ secrets.DOMAIN }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Download frontend build
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+      
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+      
+      - name: Create deployment package
+        run: |
+          tar -czf deploy-package.tar.gz \
+            backend/ \
+            frontend/dist/ \
+            deploy/ \
+            --exclude=backend/__pycache__ \
+            --exclude=backend/.pytest_cache \
+            --exclude=backend/venv \
+            --exclude=backend/*.pyc
+      
+      - name: Upload deployment package to server
+        run: |
+          scp deploy-package.tar.gz ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/
+      
+      - name: Deploy Backend
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
+            set -e
+            
+            echo "📦 Extracting deployment package..."
+            cd /opt/baiboly
+            tar -xzf /tmp/deploy-package.tar.gz
+            rm /tmp/deploy-package.tar.gz
+            
+            echo "🐳 Deploying backend..."
+            cd /opt/baiboly/deploy
+            bash deploy-backend.sh
+            
+            echo "✅ Backend deployed successfully"
+          ENDSSH
+      
+      - name: Deploy Frontend
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
+            set -e
+            
+            echo "🌐 Deploying frontend..."
+            
+            # Create backup of current frontend
+            TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+            if [ -d "/var/www/baiboly" ] && [ "$(ls -A /var/www/baiboly)" ]; then
+              sudo mkdir -p /var/www/baiboly-backups
+              sudo cp -r /var/www/baiboly /var/www/baiboly-backups/baiboly-$TIMESTAMP
+              echo "✅ Backup created: /var/www/baiboly-backups/baiboly-$TIMESTAMP"
+            fi
+            
+            # Deploy new frontend
+            sudo rm -rf /var/www/baiboly/*
+            sudo cp -r /opt/baiboly/frontend/dist/* /var/www/baiboly/
+            sudo chown -R www-data:www-data /var/www/baiboly
+            sudo chmod -R 755 /var/www/baiboly
+            
+            # Test Apache configuration
+            sudo apache2ctl configtest
+            
+            # Reload Apache
+            sudo systemctl reload apache2
+            
+            echo "✅ Frontend deployed successfully"
+          ENDSSH
+      
+      - name: Health Check
+        run: |
+          echo "🏥 Performing health checks..."
+          sleep 10
+          
+          # Check backend API
+          if curl -f -s http://${{ secrets.SERVER_HOST }}:5000/api/health > /dev/null; then
+            echo "✅ Backend API is healthy"
+          else
+            echo "❌ Backend API health check failed"
+            exit 1
+          fi
+          
+          # Check frontend (if domain is configured)
+          if [ -n "${{ secrets.DOMAIN }}" ]; then
+            if curl -f -s https://${{ secrets.DOMAIN }} > /dev/null; then
+              echo "✅ Frontend is accessible"
+            else
+              echo "⚠️ Frontend health check failed (may need SSL configuration)"
+            fi
+          fi
+      
+      - name: Cleanup old backups
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
+            # Keep only last 5 frontend backups
+            cd /var/www/baiboly-backups 2>/dev/null || exit 0
+            ls -t | tail -n +6 | xargs -r sudo rm -rf
+            echo "✅ Old backups cleaned"
+          ENDSSH
+      
+      - name: Deployment Summary
+        run: |
+          echo "🎉 Deployment completed successfully!"
+          echo "📊 Deployment details:"
+          echo "  - Commit: ${{ github.sha }}"
+          echo "  - Branch: ${{ github.ref_name }}"
+          echo "  - Author: ${{ github.actor }}"
+          echo "  - Time: $(date)"
+
+  # Job 5: Rollback (manual trigger only)
+  rollback:
+    name: Rollback to Previous Version
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+      
+      - name: Rollback Frontend
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
+            set -e
+            
+            echo "⏪ Rolling back frontend..."
+            cd /var/www/baiboly-backups
+            LATEST_BACKUP=$(ls -t | head -n 1)
+            
+            if [ -z "$LATEST_BACKUP" ]; then
+              echo "❌ No backup found"
+              exit 1
+            fi
+            
+            sudo rm -rf /var/www/baiboly/*
+            sudo cp -r $LATEST_BACKUP/* /var/www/baiboly/
+            sudo systemctl reload apache2
+            
+            echo "✅ Frontend rolled back to: $LATEST_BACKUP"
+          ENDSSH
+      
+      - name: Rollback Backend
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
+            set -e
+            
+            echo "⏪ Rolling back backend..."
+            cd /opt/baiboly
+            git checkout HEAD~1
+            cd deploy
+            docker-compose -f docker-compose.prod.yml up -d --build backend
+            
+            echo "✅ Backend rolled back"
+          ENDSSH

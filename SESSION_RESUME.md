@@ -1,7 +1,7 @@
 # Résumé de Session - Projet Baiboly
 
-**Date de dernière mise à jour:** 2025-11-19 (Session 2)
-**Statut du projet:** ✅ Fonctionnel - Fihirana + Bible + Backup automatique opérationnels
+**Date de dernière mise à jour:** 2025-11-22 (Session 3)
+**Statut du projet:** ✅ Fonctionnel - Fihirana + Bible + Backup + CI/CD configuré
 
 ## 📋 État Actuel du Projet
 
@@ -54,6 +54,55 @@
 - Volumes persistants pour la base de données
 
 ## 🔧 Problèmes Résolus Récemment
+
+### 5. Workflow CI/CD pour Déploiement Production (2025-11-22)
+**Problème:** Besoin d'automatiser le déploiement sur serveur VPS OVH avec architecture hybride (frontend Apache, backend+DB Docker).
+
+**Solution Implémentée:**
+- ✅ Workflow GitHub Actions complet avec tests automatiques
+- ✅ Configuration Apache VirtualHost pour servir frontend statique
+- ✅ Scripts de déploiement backend (`deploy-backend.sh`) et frontend (`deploy-frontend.sh`)
+- ✅ Script d'initialisation serveur (`server-setup.sh`)
+- ✅ Déploiement automatique sur push `main`
+- ✅ Health checks et rollback automatique
+- ✅ Ajout gunicorn comme serveur WSGI production
+
+**Architecture Production:**
+```
+Internet → Apache (80/443)
+              ├─→ /var/www/baiboly (Frontend Static)
+              └─→ ProxyPass /api → Backend Docker:5000
+                                        ↓
+                                   PostgreSQL Docker:5432
+```
+
+**Fichiers créés:**
+- `.github/workflows/ci-cd.yml` - Workflow GitHub Actions
+- `deploy/baiboly.conf` - Configuration Apache VirtualHost
+- `deploy/server-setup.sh` - Setup initial serveur
+- `deploy/deploy-backend.sh` - Déploiement backend
+- `deploy/deploy-frontend.sh` - Déploiement frontend
+- `CI_CD.md` - Documentation complète CI/CD
+- `GITHUB_SECRETS.md` - Guide configuration secrets
+
+**Fichiers modifiés:**
+- `deploy/docker-compose.prod.yml` - Retiré nginx/frontend (architecture hybride)
+- `backend/requirements.txt` - Ajout gunicorn==21.2.0
+- `deploy/.env.production.example` - Ajout CORS_ORIGINS
+- `deploy/README.md` - Documentation Apache
+
+**Workflow:**
+1. Push sur `main` → Tests backend + frontend
+2. Build frontend → Artifact
+3. Déploiement backend via SSH + Docker
+4. Déploiement frontend → Copie vers `/var/www/baiboly` + reload Apache
+5. Health checks API + Frontend
+
+**Secrets GitHub requis:**
+- `SSH_PRIVATE_KEY` - Clé SSH pour accès serveur
+- `SERVER_HOST` - IP/domaine VPS OVH
+- `SERVER_USER` - Utilisateur SSH
+- `DOMAIN` - Nom de domaine (optionnel)
 
 ### 4. Numérotation et Titres des Collections Fihirana (2025-11-19)
 **Problème:** Les chansons de collections différentes (FFPM, FANAMPINY, ANTEMA) avec le même numéro étaient confondues. Par exemple, ANTEMA #1 et FFPM #1 sont deux chansons différentes.

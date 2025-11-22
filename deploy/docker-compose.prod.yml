@@ -2,12 +2,13 @@ version: '3.8'
 
 services:
   db:
-    image: postgres:13
+    image: postgres:13-alpine
     container_name: baiboly-db-prod
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-baiboly}
       POSTGRES_USER: ${POSTGRES_USER:-baiboly}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backups:/backups
@@ -15,7 +16,7 @@ services:
       - baiboly-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-baiboly}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-baiboly} -d ${POSTGRES_DB:-baiboly}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -26,52 +27,34 @@ services:
       dockerfile: Dockerfile
     container_name: baiboly-backend-prod
     environment:
+      FLASK_APP: src/app.py
       FLASK_ENV: production
       DATABASE_URL: postgresql://${POSTGRES_USER:-baiboly}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-baiboly}
       SECRET_KEY: ${SECRET_KEY}
-      FLASK_APP: src.app:create_app
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://votredomaine.com}
+      BABEL_DEFAULT_LOCALE: mg
+      BABEL_DEFAULT_TIMEZONE: Indian/Antananarivo
     depends_on:
       db:
         condition: service_healthy
     networks:
       - baiboly-network
+    ports:
+      - "5000:5000"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:5000/api/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 40s
     volumes:
       - ./logs:/app/logs
-
-  frontend:
-    build:
-      context: ../frontend
-      dockerfile: Dockerfile.prod
-      args:
-        VITE_API_URL: ${VITE_API_URL:-/api}
-    container_name: baiboly-frontend-prod
-    networks:
-      - baiboly-network
-    restart: unless-stopped
-
-  nginx:
-    image: nginx:alpine
-    container_name: baiboly-nginx-prod
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./ssl:/etc/nginx/ssl:ro
-      - nginx_cache:/var/cache/nginx
-      - ./logs/nginx:/var/log/nginx
-    depends_on:
-      - backend
-      - frontend
-    networks:
-      - baiboly-network
-    restart: unless-stopped
+    command: >
+      sh -c "
+        flask db upgrade &&
+        gunicorn --bind 0.0.0.0:5000 --workers 4 --timeout 120 'src.app:create_app()'
+      "
 
 networks:
   baiboly-network:
@@ -79,4 +62,5 @@ networks:
 
 volumes:
   postgres_data:
-  nginx_cache:
+
+

@@ -15,6 +15,9 @@ Flask-Babel==4.0.0
 # Environment
 python-dotenv==1.0.0
 
+# Production WSGI Server
+gunicorn==21.2.0
+
 # HTTP Requests
 requests==2.31.0
 
