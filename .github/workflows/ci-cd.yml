@@ -182,20 +182,18 @@ jobs:
         run: |
           scp deploy-package.tar.gz ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/
 
-      - name: Deploy Backend
+      - name: Deploy Backend (Mise à jour du conteneur Docker)
         run: |
           ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
             set -e
           
             echo "📦 Extracting deployment package..."
-            # Assurez-vous que ce répertoire est bien celui où le backend doit vivre temporairement
             cd /var/www/html/baiboly
             tar -xzf /tmp/deploy-package.tar.gz
             rm /tmp/deploy-package.tar.gz
           
-            # --- FIX: Création du fichier .env pour le Backend ---
+            # Création du fichier .env pour le Backend
             echo "⚙️ Creating .env configuration file..."
-            # Utilise le secret GitHub pour créer le .env dans le dossier backend/
             echo "${{ secrets.BACKEND_PROD_ENV }}" > /var/www/html/baiboly/backend/.env
             chmod 600 /var/www/html/baiboly/backend/.env
           
@@ -206,7 +204,7 @@ jobs:
             echo "✅ Backend deployed successfully"
           ENDSSH
 
-      - name: Deploy Frontend
+      - name: Deploy Frontend (Copie des fichiers statiques)
         run: |
           ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
             set -e
@@ -217,18 +215,17 @@ jobs:
             TIMESTAMP=$(date +%Y%m%d_%H%M%S)
             if [ -d "/var/www/html/baiboly" ] && [ "$(ls -A /var/www/html/baiboly)" ]; then
               mkdir -p /var/www/html/baiboly-backups
-              # Seuls les fichiers du frontend devraient être sauvegardés ici si le backend est géré par Docker
-              # Sinon, il faut ajuster la sauvegarde
               cp -r /var/www/html/baiboly /var/www/html/baiboly-backups/baiboly-$TIMESTAMP
               echo "✅ Backup created: /var/www/html/baiboly-backups/baiboly-$TIMESTAMP"
             fi
           
-            # Deploy new frontend
-            # Nous gardons le dossier "backend" pour le déploiement Docker
-            rm -rf /var/www/html/baiboly/*
-            # Assurez-vous que l'extraction précédente n'a pas supprimé le répertoire "backend"
+            # Déploiement des nouveaux fichiers du frontend
+            # On supprime le contenu de baiboly/, mais pas le répertoire backend qui vient d'être extrait
+            find /var/www/html/baiboly/ -maxdepth 1 -type f -exec rm -rf {} +
+            rm -rf /var/www/html/baiboly/frontend
+            rm -rf /var/www/html/baiboly/deploy
           
-            # Copie uniquement le contenu de dist/
+            # Copie uniquement le contenu de dist/ à la racine du site
             cp -r /var/www/html/baiboly/frontend/dist/* /var/www/html/baiboly/
           
             chown -R www-data:www-data /var/www/html/baiboly
@@ -275,52 +272,3 @@ jobs:
           echo "  - Branch: ${{ github.ref_name }}"
           echo "  - Author: ${{ github.actor }}"
           echo "  - Time: $(date)"
-
-  # Job 5: Rollback (manual trigger only)
-  rollback:
-    name: Rollback to Previous Version
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
-
-    steps:
-      - name: Setup SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
-
-      - name: Rollback Frontend
-        run: |
-          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
-            set -e
-          
-            echo "⏪ Rolling back frontend..."
-            cd /var/www/html/baiboly-backups
-            LATEST_BACKUP=$(ls -t | head -n 1)
-          
-            if [ -z "$LATEST_BACKUP" ]; then
-              echo "❌ No backup found"
-              exit 1
-            fi
-          
-            rm -rf /var/www/html/baiboly/*
-            cp -r $LATEST_BACKUP/* /var/www/html/baiboly/
-            systemctl reload apache2
-          
-            echo "✅ Frontend rolled back to: $LATEST_BACKUP"
-          ENDSSH
-
-      - name: Rollback Backend
-        run: |
-          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
-            set -e
-          
-            echo "⏪ Rolling back backend..."
-            cd /var/www/html/baiboly
-            git checkout HEAD~1
-            cd deploy
-            docker-compose -f docker-compose.prod.yml up -d --build backend
-          
-            echo "✅ Backend rolled back"
-          ENDSSH
