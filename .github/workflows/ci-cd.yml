@@ -173,14 +173,10 @@ jobs:
             --exclude=backend/__pycache__ \
             --exclude=backend/.pytest_cache \
             --exclude=backend/venv \
-            --exclude=backend/*.pyc \
+            --exclude='backend/*.pyc' \
             backend/ \
             frontend/dist/ \
-            deploy/ \
-            --exclude=backend/__pycache__ \
-            --exclude=backend/.pytest_cache \
-            --exclude=backend/venv \
-            --exclude=backend/*.pyc
+            deploy/
       
       - name: Upload deployment package to server
         run: |
