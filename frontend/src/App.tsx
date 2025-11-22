@@ -9,6 +9,7 @@ import BiblePage from './pages/BiblePage';
 import FihiranaPage from './pages/FihiranaPage';
 import FihiranaDetail from './components/Fihirana/FihiranaDetail';
 
+
 function App() {
   return (
     <ThemeProvider theme={theme}>
