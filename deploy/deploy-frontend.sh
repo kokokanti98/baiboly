@@ -14,8 +14,8 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Configuration
-DEPLOY_DIR="/var/www/baiboly"
-BACKUP_DIR="/var/www/baiboly-backups"
+DEPLOY_DIR="/var/www/html/baiboly"
+BACKUP_DIR="/var/www/html/baiboly-backups"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
 # Check if dist directory exists

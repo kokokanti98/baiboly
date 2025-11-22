@@ -9,11 +9,10 @@ Le workflow nécessite les secrets suivants dans votre repository GitHub :
 | Secret | Description | Exemple | Obligatoire |
 |--------|-------------|---------|-------------|
 | `SSH_PRIVATE_KEY` | Clé SSH privée pour accès au serveur | `-----BEGIN OPENSSH PRIVATE KEY-----...` | ✅ Oui |
-| `SERVER_HOST` | IP ou domaine du serveur VPS OVH | `123.45.67.89` ou `vps-xxxxx.ovh.net` | ✅ Oui |
-| `SERVER_USER` | Utilisateur SSH sur le serveur | `ubuntu` ou `debian` | ✅ Oui |
-| `DOMAIN` | Nom de domaine (optionnel pour l'instant) | `baiboly.mg` | ⚠️ Optionnel |
-| `POSTGRES_PASSWORD` | Mot de passe PostgreSQL production | `votre_mot_de_passe_securise` | 🔜 Plus tard |
-| `SECRET_KEY` | Clé secrète Flask | `abc123...` (32+ caractères) | 🔜 Plus tard |
+| `SERVER_HOST` | IP ou domaine du serveur VPS OVH | `193.70.0.44` | ✅ Oui |
+| `SERVER_USER` | Utilisateur SSH sur le serveur | `root` | ✅ Oui |
+
+**Note:** Le domaine sera configuré manuellement dans Apache (`/etc/apache2/sites-available/baiboly.conf`), donc pas besoin du secret `DOMAIN`.
 
 ## Étape 1 : Créer une Clé SSH pour CI/CD
 
@@ -275,7 +274,7 @@ Une fois les secrets configurés, le workflow fonctionne ainsi :
 3. **Tests Frontend** → Jest + couverture ≥75%
 4. **Build Frontend** → `npm run build`
 5. **Déploiement Backend** → Docker sur serveur
-6. **Déploiement Frontend** → Copie vers `/var/www/baiboly`
+6. **Déploiement Frontend** → Copie vers `/var/www/html/baiboly`
 7. **Health Checks** → Vérification API + Frontend
 8. **Nettoyage** → Suppression anciens backups
 

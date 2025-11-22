@@ -283,7 +283,7 @@ docker-compose -f /opt/baiboly/deploy/docker-compose.prod.yml restart backend
 
 ```bash
 # Vérifier les fichiers
-ls -la /var/www/baiboly/
+ls -la /var/www/html/baiboly/
 
 # Vérifier Apache
 sudo apache2ctl configtest

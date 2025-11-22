@@ -22,7 +22,7 @@ Ce document décrit le workflow CI/CD pour déployer l'application Baiboly sur u
 │                                                  │
 │  ┌──────────────────────────────────────────┐  │
 │  │  Apache (Port 80/443)                    │  │
-│  │  ├─ /var/www/baiboly (Frontend Static)   │  │
+│  │  ├─ /var/www/html/baiboly (Frontend Static)   │  │
 │  │  └─ ProxyPass /api → localhost:5000      │  │
 │  └──────────────────────────────────────────┘  │
 │                      ↓                           │
@@ -234,8 +234,8 @@ jobs:
         run: |
           scp -r frontend/dist/* ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/baiboly-frontend/
           ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
-            sudo cp -r /tmp/baiboly-frontend/* /var/www/baiboly/
-            sudo chown -R www-data:www-data /var/www/baiboly
+            sudo cp -r /tmp/baiboly-frontend/* /var/www/html/baiboly/
+            sudo chown -R www-data:www-data /var/www/html/baiboly
             sudo systemctl reload apache2
             rm -rf /tmp/baiboly-frontend
           EOF

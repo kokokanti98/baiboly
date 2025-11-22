@@ -10,7 +10,7 @@
 **Production (VPS OVH):**
 ```
 Internet → Apache (Port 80/443)
-              ├─→ /var/www/baiboly (Frontend Static Files)
+              ├─→ /var/www/html/baiboly (Frontend Static Files)
               └─→ ProxyPass /api → Backend Docker:5000
                                         ↓
                                    PostgreSQL Docker:5432
@@ -60,7 +60,7 @@ Docker Compose:
 
 - ✅ `deploy/deploy-frontend.sh`
   - Backup automatique version précédente (garde 5 derniers)
-  - Copie fichiers vers `/var/www/baiboly`
+  - Copie fichiers vers `/var/www/html/baiboly`
   - Permissions correctes (www-data:www-data)
   - Test configuration Apache
   - Reload Apache

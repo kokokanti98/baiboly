@@ -146,7 +146,6 @@ jobs:
     
     environment:
       name: production
-      url: https://${{ secrets.DOMAIN }}
     
     steps:
       - name: Checkout code
@@ -206,23 +205,23 @@ jobs:
             
             # Create backup of current frontend
             TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-            if [ -d "/var/www/baiboly" ] && [ "$(ls -A /var/www/baiboly)" ]; then
-              sudo mkdir -p /var/www/baiboly-backups
-              sudo cp -r /var/www/baiboly /var/www/baiboly-backups/baiboly-$TIMESTAMP
-              echo "✅ Backup created: /var/www/baiboly-backups/baiboly-$TIMESTAMP"
+            if [ -d "/var/www/html/baiboly" ] && [ "$(ls -A /var/www/html/baiboly)" ]; then
+              mkdir -p /var/www/html/baiboly-backups
+              cp -r /var/www/html/baiboly /var/www/html/baiboly-backups/baiboly-$TIMESTAMP
+              echo "✅ Backup created: /var/www/html/baiboly-backups/baiboly-$TIMESTAMP"
             fi
             
             # Deploy new frontend
-            sudo rm -rf /var/www/baiboly/*
-            sudo cp -r /opt/baiboly/frontend/dist/* /var/www/baiboly/
-            sudo chown -R www-data:www-data /var/www/baiboly
-            sudo chmod -R 755 /var/www/baiboly
+            rm -rf /var/www/html/baiboly/*
+            cp -r /opt/baiboly/frontend/dist/* /var/www/html/baiboly/
+            chown -R www-data:www-data /var/www/html/baiboly
+            chmod -R 755 /var/www/html/baiboly
             
             # Test Apache configuration
-            sudo apache2ctl configtest
+            apache2ctl configtest
             
             # Reload Apache
-            sudo systemctl reload apache2
+            systemctl reload apache2
             
             echo "✅ Frontend deployed successfully"
           ENDSSH
@@ -240,21 +239,14 @@ jobs:
             exit 1
           fi
           
-          # Check frontend (if domain is configured)
-          if [ -n "${{ secrets.DOMAIN }}" ]; then
-            if curl -f -s https://${{ secrets.DOMAIN }} > /dev/null; then
-              echo "✅ Frontend is accessible"
-            else
-              echo "⚠️ Frontend health check failed (may need SSL configuration)"
-            fi
-          fi
+          echo "✅ Deployment health checks passed"
       
       - name: Cleanup old backups
         run: |
           ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
             # Keep only last 5 frontend backups
-            cd /var/www/baiboly-backups 2>/dev/null || exit 0
-            ls -t | tail -n +6 | xargs -r sudo rm -rf
+            cd /var/www/html/baiboly-backups 2>/dev/null || exit 0
+            ls -t | tail -n +6 | xargs -r rm -rf
             echo "✅ Old backups cleaned"
           ENDSSH
       
@@ -287,7 +279,7 @@ jobs:
             set -e
             
             echo "⏪ Rolling back frontend..."
-            cd /var/www/baiboly-backups
+            cd /var/www/html/baiboly-backups
             LATEST_BACKUP=$(ls -t | head -n 1)
             
             if [ -z "$LATEST_BACKUP" ]; then
@@ -295,9 +287,9 @@ jobs:
               exit 1
             fi
             
-            sudo rm -rf /var/www/baiboly/*
-            sudo cp -r $LATEST_BACKUP/* /var/www/baiboly/
-            sudo systemctl reload apache2
+            rm -rf /var/www/html/baiboly/*
+            cp -r $LATEST_BACKUP/* /var/www/html/baiboly/
+            systemctl reload apache2
             
             echo "✅ Frontend rolled back to: $LATEST_BACKUP"
           ENDSSH

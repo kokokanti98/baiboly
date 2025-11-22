@@ -279,7 +279,7 @@ docker-compose -f docker-compose.prod.yml restart backend
 sudo apache2ctl configtest
 
 # Check if files exist
-ls -la /var/www/baiboly/
+ls -la /var/www/html/baiboly/
 
 # Check Apache logs
 tail -f /var/log/apache2/baiboly-error.log

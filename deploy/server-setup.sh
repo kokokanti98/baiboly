@@ -105,14 +105,14 @@ echo "Creating application directories..."
 mkdir -p /opt/baiboly/deploy
 mkdir -p /opt/baiboly/deploy/backups
 mkdir -p /opt/baiboly/deploy/logs
-mkdir -p /var/www/baiboly
+mkdir -p /var/www/html/baiboly
 echo -e "${GREEN}✓${NC} Directories created"
 
 # Set permissions
 echo ""
 echo "Setting permissions..."
-chown -R www-data:www-data /var/www/baiboly
-chmod -R 755 /var/www/baiboly
+chown -R www-data:www-data /var/www/html/baiboly
+chmod -R 755 /var/www/html/baiboly
 echo -e "${GREEN}✓${NC} Permissions set"
 
 # Configure firewall

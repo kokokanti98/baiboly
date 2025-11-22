@@ -70,7 +70,7 @@
 **Architecture Production:**
 ```
 Internet → Apache (80/443)
-              ├─→ /var/www/baiboly (Frontend Static)
+              ├─→ /var/www/html/baiboly (Frontend Static)
               └─→ ProxyPass /api → Backend Docker:5000
                                         ↓
                                    PostgreSQL Docker:5432
@@ -95,7 +95,7 @@ Internet → Apache (80/443)
 1. Push sur `main` → Tests backend + frontend
 2. Build frontend → Artifact
 3. Déploiement backend via SSH + Docker
-4. Déploiement frontend → Copie vers `/var/www/baiboly` + reload Apache
+4. Déploiement frontend → Copie vers `/var/www/html/baiboly` + reload Apache
 5. Health checks API + Frontend
 
 **Secrets GitHub requis:**
