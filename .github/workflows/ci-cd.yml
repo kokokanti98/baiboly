@@ -186,14 +186,14 @@ jobs:
         run: |
           ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
             set -e
+          
+            echo "📦 Copy env production files..."
+            echo "${{ secrets.BACKEND_PROD_ENV }}" > /var/www/html/baiboly/backend/.env
             
             echo "📦 Extracting deployment package..."
             cd /var/www/html/baiboly
             tar -xzf /tmp/deploy-package.tar.gz
             rm /tmp/deploy-package.tar.gz
-          
-            echo "📦 Copy env production files..."
-            echo "${{ secrets.BACKEND_PROD_ENV }}" > /var/www/html/baiboly/backend/.env
             
             echo "🐳 Deploying backend..."
             cd /var/www/html/baiboly/deploy
