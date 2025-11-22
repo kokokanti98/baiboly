@@ -121,7 +121,7 @@ jobs:
           VITE_API_BASE_URL: /api
         run: |
           cd frontend
-          npm run build
+          npx vite build
       
       - name: Check bundle size
         run: |
