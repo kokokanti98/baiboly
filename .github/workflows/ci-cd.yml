@@ -188,12 +188,12 @@ jobs:
             set -e
             
             echo "📦 Extracting deployment package..."
-            cd /opt/baiboly
+            cd /var/www/html/baiboly
             tar -xzf /tmp/deploy-package.tar.gz
             rm /tmp/deploy-package.tar.gz
             
             echo "🐳 Deploying backend..."
-            cd /opt/baiboly/deploy
+            cd /var/www/html/baiboly/deploy
             bash deploy-backend.sh
             
             echo "✅ Backend deployed successfully"
@@ -216,7 +216,7 @@ jobs:
             
             # Deploy new frontend
             rm -rf /var/www/html/baiboly/*
-            cp -r /opt/baiboly/frontend/dist/* /var/www/html/baiboly/
+            cp -r /var/www/html/baiboly/frontend/dist/* /var/www/html/baiboly/
             chown -R www-data:www-data /var/www/html/baiboly
             chmod -R 755 /var/www/html/baiboly
             
@@ -303,7 +303,7 @@ jobs:
             set -e
             
             echo "⏪ Rolling back backend..."
-            cd /opt/baiboly
+            cd /var/www/html/baiboly
             git checkout HEAD~1
             cd deploy
             docker-compose -f docker-compose.prod.yml up -d --build backend
