@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Box, Tabs, Tab, Container } from '@mui/material';
 import MusicNoteIcon from '@mui/icons-material/MusicNote';
 import SearchIcon from '@mui/icons-material/Search';
-import FihiranaReader from '../components/Fihirana/FihiranaReader';
-import FihiranaSearch from '../components/Fihirana/FihiranaSearch';
+import FihiranaReader from '../components/fihirana/FihiranaReader';
+import FihiranaSearch from '../components/fihirana/FihiranaSearch';
 import { useTranslation } from 'react-i18next';
 
 interface TabPanelProps {
