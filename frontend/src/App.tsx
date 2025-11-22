@@ -7,7 +7,7 @@ import Header from './components/Layout/Header';
 import HomePage from './pages/HomePage';
 import BiblePage from './pages/BiblePage';
 import FihiranaPage from './pages/FihiranaPage';
-import FihiranaDetail from './components/Fihirana/FihiranaDetail';
+import FihiranaDetail from './components/fihirana/FihiranaDetail';
 
 
 function App() {
