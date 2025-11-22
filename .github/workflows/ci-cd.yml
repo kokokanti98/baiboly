@@ -170,6 +170,10 @@ jobs:
       - name: Create deployment package
         run: |
           tar -czf deploy-package.tar.gz \
+            --exclude=backend/__pycache__ \
+            --exclude=backend/.pytest_cache \
+            --exclude=backend/venv \
+            --exclude=backend/*.pyc \
             backend/ \
             frontend/dist/ \
             deploy/ \
